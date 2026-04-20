@@ -17,7 +17,6 @@ artifacts:
         clone_strategy: "minimal"
         # Only include the mock PHP files used for testing
         include_patterns:
-          - "libs/waivern-filesystem/tests/waivern_filesystem/filesystem_mock_lite/source_code/*.php"
           - "libs/waivern-filesystem/tests/waivern_filesystem/filesystem_mock/source_code/*.php"
         max_files: 50
 

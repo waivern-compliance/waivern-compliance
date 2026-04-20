@@ -11,7 +11,7 @@ artifacts:
     source:
       type: "filesystem"
       properties:
-        path: "./libs/waivern-filesystem/tests/waivern_filesystem/filesystem_mock_lite"
+        path: "./libs/waivern-filesystem/tests/waivern_filesystem/filesystem_mock"
         exclude_patterns: ["*.pyc", "__pycache__"]
         max_files: 50
 
