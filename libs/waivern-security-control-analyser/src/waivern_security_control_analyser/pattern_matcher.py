@@ -2,7 +2,7 @@
 
 from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.types import PatternMatchingConfig
-from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
+from waivern_analysers_shared.utilities import EvidenceExtractor
 from waivern_rulesets.security_control_indicator import SecurityControlIndicatorRule
 from waivern_schemas.connector_types import BaseMetadata
 from waivern_schemas.security_evidence import (
@@ -14,23 +14,29 @@ from waivern_schemas.security_evidence import (
 class SecurityControlPatternMatcher:
     """Pattern matcher for security control analysis.
 
-    Scans text content for security control patterns and builds
-    SecurityEvidenceModel items directly from the rule's security_domain
-    and polarity. No intermediate indicator model is needed — unlike
-    CryptoQualityAnalyser, domain and polarity are already encoded on
-    each rule and require no further derivation.
+    Accepts rules via constructor to decouple from ruleset loading.
+    The analyser loads rules and passes them in at construction time.
+
+    Builds SecurityEvidenceModel items directly from the rule's
+    security_domain and polarity — no intermediate indicator model
+    or derivation map is needed.
     """
 
-    def __init__(self, config: PatternMatchingConfig) -> None:
-        """Initialise the pattern matcher with configuration.
+    def __init__(
+        self,
+        rules: tuple[SecurityControlIndicatorRule, ...],
+        config: PatternMatchingConfig,
+    ) -> None:
+        """Initialise the pattern matcher with rules and configuration.
 
         Args:
-            config: Pattern matching configuration
+            rules: Security control indicator detection rules.
+            config: Pattern matching configuration for evidence extraction.
 
         """
+        self._rules = rules
         self._config = config
         self._evidence_extractor = EvidenceExtractor()
-        self._ruleset_manager = RulesetManager()
         self._dispatcher = RulePatternDispatcher()
 
     def find_patterns(
@@ -51,12 +57,9 @@ class SecurityControlPatternMatcher:
         if not content.strip():
             return []
 
-        rules = self._ruleset_manager.get_rules(
-            self._config.ruleset, SecurityControlIndicatorRule
-        )
         findings: list[SecurityEvidenceModel] = []
 
-        for rule in rules:
+        for rule in self._rules:
             results = self._dispatcher.find_matches(
                 content,
                 rule,

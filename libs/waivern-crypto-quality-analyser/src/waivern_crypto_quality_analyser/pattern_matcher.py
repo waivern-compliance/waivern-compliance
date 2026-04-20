@@ -2,7 +2,7 @@
 
 from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.types import PatternMatchingConfig
-from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
+from waivern_analysers_shared.utilities import EvidenceExtractor
 from waivern_core.schemas import PatternMatchDetail
 from waivern_rulesets.crypto_quality_indicator import CryptoQualityIndicatorRule
 from waivern_schemas.connector_types import BaseMetadata
@@ -24,20 +24,25 @@ _POLARITY_MAP: dict[str, str] = {
 class CryptoQualityPatternMatcher:
     """Pattern matcher for cryptographic algorithm quality analysis.
 
-    Scans text content for known algorithm patterns and assigns quality
-    ratings and polarity based on the matched rule's quality_rating field.
+    Accepts rules via constructor to decouple from ruleset loading.
+    The analyser loads rules and passes them in at construction time.
     """
 
-    def __init__(self, config: PatternMatchingConfig) -> None:
-        """Initialise the pattern matcher with configuration.
+    def __init__(
+        self,
+        rules: tuple[CryptoQualityIndicatorRule, ...],
+        config: PatternMatchingConfig,
+    ) -> None:
+        """Initialise the pattern matcher with rules and configuration.
 
         Args:
-            config: Pattern matching configuration
+            rules: Crypto quality indicator detection rules.
+            config: Pattern matching configuration for evidence extraction.
 
         """
+        self._rules = rules
         self._config = config
         self._evidence_extractor = EvidenceExtractor()
-        self._ruleset_manager = RulesetManager()
         self._dispatcher = RulePatternDispatcher()
 
     def find_patterns(
@@ -58,12 +63,9 @@ class CryptoQualityPatternMatcher:
         if not content.strip():
             return []
 
-        rules = self._ruleset_manager.get_rules(
-            self._config.ruleset, CryptoQualityIndicatorRule
-        )
         findings: list[CryptoQualityIndicatorModel] = []
 
-        for rule in rules:
+        for rule in self._rules:
             results = self._dispatcher.find_matches(
                 content,
                 rule,

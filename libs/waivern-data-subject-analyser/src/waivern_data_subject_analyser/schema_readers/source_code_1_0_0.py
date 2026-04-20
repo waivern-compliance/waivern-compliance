@@ -3,6 +3,7 @@
 from typing import Any
 
 from waivern_analysers_shared import SchemaInputHandler
+from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 from waivern_schemas.data_subject_indicator import DataSubjectIndicatorModel
 from waivern_schemas.source_code import SourceCodeDataModel
 
@@ -28,17 +29,20 @@ def read(content: dict[str, Any]) -> SourceCodeDataModel:
 
 def create_handler(
     config: DataSubjectAnalyserConfig,
+    rules: tuple[DataSubjectIndicatorRule, ...],
 ) -> SchemaInputHandler[DataSubjectIndicatorModel]:
     """Create handler for source_code schema.
 
     Args:
         config: Analyser configuration.
+        rules: Pre-loaded data subject indicator rules.
 
     Returns:
         Handler implementing SchemaInputHandler protocol.
 
     """
     return SourceCodeSchemaInputHandler(
+        rules=rules,
         config=config.pattern_matching,
         context_window=config.source_code_context_window,
     )

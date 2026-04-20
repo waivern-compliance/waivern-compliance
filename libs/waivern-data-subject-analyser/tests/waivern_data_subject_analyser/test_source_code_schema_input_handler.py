@@ -1,11 +1,95 @@
-"""Unit tests for SourceCodeSchemaInputHandler."""
+"""Unit tests for SourceCodeSchemaInputHandler.
+
+Uses synthetic rules injected via constructor to decouple from
+production ruleset data.
+"""
 
 import pytest
 from waivern_analysers_shared.types import PatternMatchingConfig
+from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
+from waivern_schemas.source_code import (
+    SourceCodeAnalysisMetadataModel,
+    SourceCodeDataModel,
+    SourceCodeFileDataModel,
+    SourceCodeFileMetadataModel,
+)
 
 from waivern_data_subject_analyser.source_code_schema_input_handler import (
     SourceCodeSchemaInputHandler,
 )
+
+# =============================================================================
+# Synthetic rules
+# =============================================================================
+
+RULE_EMPLOYEE_A = DataSubjectIndicatorRule(
+    name="Test Employee A",
+    description="Employee indicator A",
+    subject_category="test_employee",
+    indicator_type="primary",
+    confidence_weight=45,
+    patterns=("test_employee_a_kw",),
+)
+
+RULE_EMPLOYEE_B = DataSubjectIndicatorRule(
+    name="Test Employee B",
+    description="Employee indicator B",
+    subject_category="test_employee",
+    indicator_type="secondary",
+    confidence_weight=25,
+    patterns=("test_employee_b_kw",),
+)
+
+RULE_CUSTOMER = DataSubjectIndicatorRule(
+    name="Test Customer",
+    description="Customer indicator",
+    subject_category="test_customer",
+    indicator_type="primary",
+    confidence_weight=50,
+    patterns=("test_customer_kw",),
+)
+
+SYNTHETIC_RULES = (RULE_EMPLOYEE_A, RULE_EMPLOYEE_B, RULE_CUSTOMER)
+
+_UNUSED_RULESET_URI = "unused/test/1.0.0"
+
+_DEFAULT_FILE_METADATA = SourceCodeFileMetadataModel(
+    file_size=200, line_count=10, last_modified="2024-01-01T00:00:00Z"
+)
+
+_DEFAULT_ANALYSIS_METADATA = SourceCodeAnalysisMetadataModel(
+    total_files=1, total_lines=10, analysis_timestamp="2024-01-01T00:00:00Z"
+)
+
+
+def _make_handler() -> SourceCodeSchemaInputHandler:
+    """Create a handler with synthetic rules and default config."""
+    config = PatternMatchingConfig(ruleset=_UNUSED_RULESET_URI)
+    return SourceCodeSchemaInputHandler(SYNTHETIC_RULES, config)
+
+
+def _make_source_data(file_path: str, raw_content: str) -> SourceCodeDataModel:
+    """Create a SourceCodeDataModel with a single file."""
+    return SourceCodeDataModel(
+        schemaVersion="1.0.0",
+        name="Test source",
+        description="Test",
+        source="source_code",
+        metadata=_DEFAULT_ANALYSIS_METADATA,
+        data=[
+            SourceCodeFileDataModel(
+                file_path=file_path,
+                language="php",
+                raw_content=raw_content,
+                metadata=_DEFAULT_FILE_METADATA,
+            )
+        ],
+    )
+
+
+# =============================================================================
+# Tests
+# =============================================================================
 
 
 class TestSourceCodeSchemaInputHandler:
@@ -13,232 +97,69 @@ class TestSourceCodeSchemaInputHandler:
 
     def test_analyse_raises_type_error_for_invalid_input(self) -> None:
         """Test that analyse raises TypeError when given non-SourceCodeDataModel."""
-        # Arrange
-        config = PatternMatchingConfig(ruleset="local/data_subject_indicator/1.0.0")
-        handler = SourceCodeSchemaInputHandler(config)
+        handler = _make_handler()
         invalid_data = {"not": "a SourceCodeDataModel"}
 
-        # Act & Assert
         with pytest.raises(TypeError, match="Expected SourceCodeDataModel"):
             handler.analyse(invalid_data)
 
     def test_analyse_groups_findings_by_category(self) -> None:
-        """Test that findings are grouped by subject category (one per category per file).
-
-        Multiple matches of the same category in the same file should produce
-        ONE indicator, not multiple.
-        """
-        from waivern_schemas.source_code import (
-            SourceCodeAnalysisMetadataModel,
-            SourceCodeDataModel,
-            SourceCodeFileDataModel,
-            SourceCodeFileMetadataModel,
+        """Multiple matches of the same category in a file produce one indicator."""
+        handler = _make_handler()
+        source_data = _make_source_data(
+            "/src/Service.php",
+            "line with test_employee_a_kw\nline with test_employee_b_kw\n",
         )
 
-        # Arrange
-        config = PatternMatchingConfig(ruleset="local/data_subject_indicator/1.0.0")
-        handler = SourceCodeSchemaInputHandler(config)
-        # This file has multiple employee patterns - should produce ONE employee indicator
-        file_data = SourceCodeFileDataModel(
-            file_path="/src/EmployeeService.php",
-            language="php",
-            raw_content="""<?php
-class EmployeeService {
-    private $employee;
-    private $staff;
-    private $worker;
-
-    public function getEmployee() {
-        return $this->employee;
-    }
-}
-""",
-            metadata=SourceCodeFileMetadataModel(
-                file_size=200, line_count=10, last_modified="2024-01-01T00:00:00Z"
-            ),
-        )
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Grouping test",
-            description="Test category grouping",
-            source="source_code",
-            metadata=SourceCodeAnalysisMetadataModel(
-                total_files=1, total_lines=10, analysis_timestamp="2024-01-01T00:00:00Z"
-            ),
-            data=[file_data],
-        )
-
-        # Act
         findings = handler.analyse(source_data)
 
-        # Assert - should have exactly ONE employee indicator, not multiple
-        employee_findings = [f for f in findings if f.subject_category == "employee"]
-        assert len(employee_findings) == 1, (
-            f"Expected 1 employee indicator (grouped), got {len(employee_findings)}"
-        )
-        # The grouped indicator should have multiple matched patterns
-        assert len(employee_findings[0].matched_patterns) >= 2, (
-            "Grouped indicator should contain multiple matched patterns"
-        )
+        employee_findings = [
+            f for f in findings if f.subject_category == "test_employee"
+        ]
+        assert len(employee_findings) == 1
+        assert len(employee_findings[0].matched_patterns) == 2
 
     def test_analyse_calculates_confidence(self) -> None:
-        """Test that confidence scores are calculated using the confidence scorer."""
-        from waivern_schemas.source_code import (
-            SourceCodeAnalysisMetadataModel,
-            SourceCodeDataModel,
-            SourceCodeFileDataModel,
-            SourceCodeFileMetadataModel,
+        """Confidence scores are calculated from matched rule weights."""
+        handler = _make_handler()
+        source_data = _make_source_data(
+            "/src/Service.php",
+            "test_employee_a_kw found here\n",
         )
 
-        # Arrange
-        config = PatternMatchingConfig(ruleset="local/data_subject_indicator/1.0.0")
-        handler = SourceCodeSchemaInputHandler(config)
-        file_data = SourceCodeFileDataModel(
-            file_path="/src/CustomerService.php",
-            language="php",
-            raw_content="""<?php
-class CustomerService {
-    private $customer;
-
-    public function getCustomer() {
-        return $this->customer;
-    }
-}
-""",
-            metadata=SourceCodeFileMetadataModel(
-                file_size=150, line_count=8, last_modified="2024-01-01T00:00:00Z"
-            ),
-        )
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Confidence test",
-            description="Test confidence scoring",
-            source="source_code",
-            metadata=SourceCodeAnalysisMetadataModel(
-                total_files=1, total_lines=8, analysis_timestamp="2024-01-01T00:00:00Z"
-            ),
-            data=[file_data],
-        )
-
-        # Act
         findings = handler.analyse(source_data)
 
-        # Assert
-        assert len(findings) > 0, "Expected at least one finding"
-        for finding in findings:
-            assert isinstance(finding.confidence_score, int)
-            assert 0 <= finding.confidence_score <= 100
+        assert len(findings) == 1
+        assert findings[0].confidence_score == 45
 
     def test_analyse_deduplicates_matched_patterns(self) -> None:
-        """Test that matched_patterns contains unique patterns only.
-
-        When the same pattern (e.g., 'employee') matches multiple times
-        across different lines, it should appear only once in matched_patterns.
-        """
-        from waivern_schemas.source_code import (
-            SourceCodeAnalysisMetadataModel,
-            SourceCodeDataModel,
-            SourceCodeFileDataModel,
-            SourceCodeFileMetadataModel,
+        """Same pattern on multiple lines appears once in matched_patterns."""
+        handler = _make_handler()
+        source_data = _make_source_data(
+            "/src/Service.php",
+            "test_employee_a_kw on line 1\ntest_employee_a_kw on line 2\ntest_employee_a_kw on line 3\n",
         )
 
-        # Arrange
-        config = PatternMatchingConfig(ruleset="local/data_subject_indicator/1.0.0")
-        handler = SourceCodeSchemaInputHandler(config)
-        # This file has 'employee' appearing 4 times - should appear once in patterns
-        file_data = SourceCodeFileDataModel(
-            file_path="/src/EmployeeService.php",
-            language="php",
-            raw_content="""<?php
-class EmployeeService {
-    private $employee;
-
-    public function getEmployee() {
-        return $this->employee;
-    }
-
-    public function setEmployee($employee) {
-        $this->employee = $employee;
-    }
-}
-""",
-            metadata=SourceCodeFileMetadataModel(
-                file_size=250, line_count=12, last_modified="2024-01-01T00:00:00Z"
-            ),
-        )
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Deduplication test",
-            description="Test pattern deduplication",
-            source="source_code",
-            metadata=SourceCodeAnalysisMetadataModel(
-                total_files=1, total_lines=12, analysis_timestamp="2024-01-01T00:00:00Z"
-            ),
-            data=[file_data],
-        )
-
-        # Act
         findings = handler.analyse(source_data)
 
-        # Assert
-        employee_findings = [f for f in findings if f.subject_category == "employee"]
-        assert len(employee_findings) == 1, "Expected exactly one employee indicator"
-
-        # Check that patterns are deduplicated
-        patterns = employee_findings[0].matched_patterns
-        pattern_strs = [p.pattern for p in patterns]
-        assert len(pattern_strs) == len(set(pattern_strs)), (
-            f"matched_patterns contains duplicates: {patterns}"
-        )
-
-        # Verify 'employee' appears exactly once despite multiple occurrences in code
-        employee_count = sum(1 for p in patterns if p.pattern.lower() == "employee")
-        assert employee_count == 1, (
-            f"'employee' should appear once, found {employee_count} times in {patterns}"
-        )
+        employee_findings = [
+            f for f in findings if f.subject_category == "test_employee"
+        ]
+        assert len(employee_findings) == 1
+        pattern_strs = [p.pattern for p in employee_findings[0].matched_patterns]
+        assert len(pattern_strs) == len(set(pattern_strs))
 
     def test_metadata_includes_file_path_and_line_number(self) -> None:
-        """Test that metadata contains file path and line number."""
-        from waivern_schemas.source_code import (
-            SourceCodeAnalysisMetadataModel,
-            SourceCodeDataModel,
-            SourceCodeFileDataModel,
-            SourceCodeFileMetadataModel,
+        """Finding metadata contains the file path and first match line number."""
+        handler = _make_handler()
+        source_data = _make_source_data(
+            "/src/Record.php",
+            "nothing here\ntest_customer_kw on line 2\n",
         )
 
-        # Arrange
-        config = PatternMatchingConfig(ruleset="local/data_subject_indicator/1.0.0")
-        handler = SourceCodeSchemaInputHandler(config)
-        file_data = SourceCodeFileDataModel(
-            file_path="/src/PatientRecord.php",
-            language="php",
-            raw_content="""<?php
-class PatientRecord {
-    private $patient;
-}
-""",
-            metadata=SourceCodeFileMetadataModel(
-                file_size=50, line_count=4, last_modified="2024-01-01T00:00:00Z"
-            ),
-        )
-        source_data = SourceCodeDataModel(
-            schemaVersion="1.0.0",
-            name="Metadata test",
-            description="Test metadata",
-            source="source_code",
-            metadata=SourceCodeAnalysisMetadataModel(
-                total_files=1, total_lines=4, analysis_timestamp="2024-01-01T00:00:00Z"
-            ),
-            data=[file_data],
-        )
-
-        # Act
         findings = handler.analyse(source_data)
 
-        # Assert
-        assert len(findings) > 0, "Expected at least one finding"
-        finding = findings[0]
-        assert finding.metadata is not None
-        assert finding.metadata.source == "/src/PatientRecord.php"
-        assert finding.metadata.line_number is not None
-        assert finding.metadata.line_number > 0
+        assert len(findings) == 1
+        assert findings[0].metadata is not None
+        assert findings[0].metadata.source == "/src/Record.php"
+        assert findings[0].metadata.line_number == 2

@@ -6,6 +6,7 @@ Wraps the existing DataSubjectPatternMatcher for schema-handler consistency.
 from typing import cast
 
 from waivern_analysers_shared.types import PatternMatchingConfig
+from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 from waivern_schemas.connector_types import BaseMetadata
 from waivern_schemas.data_subject_indicator import DataSubjectIndicatorModel
 from waivern_schemas.standard_input import StandardInputDataModel
@@ -19,14 +20,19 @@ class StandardInputSchemaInputHandler:
     Wraps DataSubjectPatternMatcher to implement the SchemaInputHandler protocol.
     """
 
-    def __init__(self, config: PatternMatchingConfig) -> None:
-        """Initialise the handler with pattern matching configuration.
+    def __init__(
+        self,
+        rules: tuple[DataSubjectIndicatorRule, ...],
+        config: PatternMatchingConfig,
+    ) -> None:
+        """Initialise the handler with rules and pattern matching configuration.
 
         Args:
+            rules: Pre-loaded data subject indicator rules.
             config: Pattern matching configuration.
 
         """
-        self._pattern_matcher = DataSubjectPatternMatcher(config)
+        self._pattern_matcher = DataSubjectPatternMatcher(rules, config)
 
     def analyse(self, data: object) -> list[DataSubjectIndicatorModel]:
         """Analyse input data for data subject patterns.

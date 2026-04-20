@@ -1,4 +1,4 @@
-"""Tests for PersonalDataAnalyserFactory.
+"""Tests for SecurityControlAnalyserFactory.
 
 Inherits contract tests from ``ComponentFactoryContractTests`` and adds
 factory-specific validation checks (ruleset availability).
@@ -17,26 +17,29 @@ from waivern_core import (
 )
 from waivern_core.services import ServiceContainer
 from waivern_rulesets import AbstractRuleset
-from waivern_rulesets.personal_data_indicator import PersonalDataIndicatorRule
+from waivern_rulesets.security_control_indicator import SecurityControlIndicatorRule
+from waivern_schemas.security_domain import SecurityDomain
 
-from waivern_personal_data_analyser import PersonalDataAnalyser
-from waivern_personal_data_analyser.factory import PersonalDataAnalyserFactory
+from waivern_security_control_analyser import SecurityControlAnalyser
+from waivern_security_control_analyser.factory import SecurityControlAnalyserFactory
 
-_VALID_RULESET_URI = "local/test_personal_data/1.0.0"
+_VALID_RULESET_URI = "local/test_security_control/1.0.0"
 
-RULE_EMAIL = PersonalDataIndicatorRule(
-    name="Email Address",
-    description="Email address detection",
-    category="email",
-    patterns=("email",),
+RULE_POSITIVE = SecurityControlIndicatorRule(
+    name="Test Positive Auth",
+    description="Positive authentication control detection",
+    category="positive_auth",
+    security_domain=SecurityDomain.AUTHENTICATION,
+    polarity="positive",
+    patterns=("test_positive_auth_pattern",),
 )
 
-SYNTHETIC_RULES = (RULE_EMAIL,)
+SYNTHETIC_RULES = (RULE_POSITIVE,)
 
 
 def _mock_get_ruleset(
-    uri: str, rule_type: type[PersonalDataIndicatorRule]
-) -> AbstractRuleset[PersonalDataIndicatorRule]:
+    uri: str, rule_type: type[SecurityControlIndicatorRule]
+) -> AbstractRuleset[SecurityControlIndicatorRule]:
     """Return a mock ruleset for the valid URI; raise for unknown URIs."""
     if uri == _VALID_RULESET_URI:
         mock_ruleset = MagicMock(spec=AbstractRuleset)
@@ -46,16 +49,16 @@ def _mock_get_ruleset(
 
 
 def _mock_get_rules(
-    uri: str, rule_type: type[PersonalDataIndicatorRule]
-) -> tuple[PersonalDataIndicatorRule, ...]:
+    uri: str, rule_type: type[SecurityControlIndicatorRule]
+) -> tuple[SecurityControlIndicatorRule, ...]:
     """Return synthetic rules for the valid URI; raise for unknown URIs."""
     if uri == _VALID_RULESET_URI:
         return SYNTHETIC_RULES
     raise ValueError(f"Unknown ruleset URI: {uri}")
 
 
-class TestPersonalDataAnalyserFactory(
-    ComponentFactoryContractTests[PersonalDataAnalyser]
+class TestSecurityControlAnalyserFactory(
+    ComponentFactoryContractTests[SecurityControlAnalyser]
 ):
     """Contract compliance plus factory-specific ruleset validation."""
 
@@ -66,9 +69,9 @@ class TestPersonalDataAnalyserFactory(
         monkeypatch.setattr(RulesetManager, "get_rules", _mock_get_rules)
 
     @pytest.fixture
-    def factory(self) -> ComponentFactory[PersonalDataAnalyser]:
+    def factory(self) -> ComponentFactory[SecurityControlAnalyser]:
         """Provide a factory wired with an empty ServiceContainer."""
-        return PersonalDataAnalyserFactory(ServiceContainer())
+        return SecurityControlAnalyserFactory(ServiceContainer())
 
     @pytest.fixture
     def valid_config(self) -> ComponentConfig:
@@ -79,19 +82,14 @@ class TestPersonalDataAnalyserFactory(
                 "evidence_context_size": "medium",
                 "maximum_evidence_count": 5,
             },
-            "llm_validation": {
-                "enable_llm_validation": True,
-                "llm_validation_mode": "standard",
-            },
         }
 
     def test_can_create_returns_false_for_nonexistent_ruleset(self) -> None:
         """A missing ruleset surfaces through can_create(), not create()."""
-        factory = PersonalDataAnalyserFactory(ServiceContainer())
+        factory = SecurityControlAnalyserFactory(ServiceContainer())
 
         config_with_nonexistent_ruleset = {
             "pattern_matching": {"ruleset": "local/nonexistent/1.0.0"},
-            "llm_validation": {"enable_llm_validation": False},
         }
 
         assert factory.can_create(config_with_nonexistent_ruleset) is False

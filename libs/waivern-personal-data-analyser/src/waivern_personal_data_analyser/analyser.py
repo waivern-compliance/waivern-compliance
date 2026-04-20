@@ -10,11 +10,13 @@ from waivern_analysers_shared.llm_validation import ValidationOrchestrator
 from waivern_analysers_shared.llm_validation.validation_orchestrator import (
     FallbackNeeded,
 )
+from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import Analyser, InputRequirement
 from waivern_core.dispatch import DispatchRequest, DispatchResult, PrepareResult
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_llm.types import LLMDispatchResult, LLMRequest
+from waivern_rulesets.personal_data_indicator import PersonalDataIndicatorRule
 from waivern_schemas.connector_types import BaseMetadata
 from waivern_schemas.personal_data_indicator import PersonalDataIndicatorModel
 from waivern_schemas.standard_input import (
@@ -48,7 +50,12 @@ class PersonalDataAnalyser(Analyser):
 
         """
         self._config = config
-        self._pattern_matcher = PersonalDataPatternMatcher(config.pattern_matching)
+        rules = RulesetManager.get_rules(
+            config.pattern_matching.ruleset, PersonalDataIndicatorRule
+        )
+        self._pattern_matcher = PersonalDataPatternMatcher(
+            rules, config.pattern_matching
+        )
         self._result_builder = PersonalDataResultBuilder(config)
         self._orchestrator: ValidationOrchestrator[PersonalDataIndicatorModel] = (
             create_validation_orchestrator(config.llm_validation)

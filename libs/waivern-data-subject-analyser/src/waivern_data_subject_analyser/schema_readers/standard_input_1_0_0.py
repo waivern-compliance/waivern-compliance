@@ -3,6 +3,7 @@
 from typing import Any
 
 from waivern_analysers_shared import SchemaInputHandler
+from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 from waivern_schemas.connector_types import BaseMetadata
 from waivern_schemas.data_subject_indicator import DataSubjectIndicatorModel
 from waivern_schemas.standard_input import StandardInputDataModel
@@ -32,14 +33,16 @@ def read(content: dict[str, Any]) -> StandardInputDataModel[BaseMetadata]:
 
 def create_handler(
     config: DataSubjectAnalyserConfig,
+    rules: tuple[DataSubjectIndicatorRule, ...],
 ) -> SchemaInputHandler[DataSubjectIndicatorModel]:
     """Create handler for standard_input schema.
 
     Args:
         config: Analyser configuration.
+        rules: Pre-loaded data subject indicator rules.
 
     Returns:
         Handler implementing SchemaInputHandler protocol.
 
     """
-    return StandardInputSchemaInputHandler(config.pattern_matching)
+    return StandardInputSchemaInputHandler(rules, config.pattern_matching)

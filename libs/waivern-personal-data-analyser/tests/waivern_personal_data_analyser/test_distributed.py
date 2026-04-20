@@ -4,10 +4,14 @@ Verifies the prepare/finalise/deserialise contract:
 - prepare() runs pattern matching and builds an LLMRequest when enabled
 - finalise() interprets dispatch results via the ValidationOrchestrator
 - deserialise_prepare_result() round-trips through JSON serialisation
+
+Uses synthetic rules via monkeypatched RulesetManager to decouple from
+production ruleset data.
 """
 
 from typing import Any, cast
 
+import pytest
 from waivern_analysers_shared.llm_validation.models import (
     LLMValidationResponseModel,
     LLMValidationResultModel,
@@ -16,9 +20,11 @@ from waivern_analysers_shared.llm_validation.validation_orchestrator import (
     OrchestratorPrepareState,
 )
 from waivern_analysers_shared.types import LLMValidationConfig, PatternMatchingConfig
+from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_llm.types import BatchingMode, LLMDispatchResult, LLMRequest
+from waivern_rulesets.personal_data_indicator import PersonalDataIndicatorRule
 from waivern_schemas.connector_types import BaseMetadata
 from waivern_schemas.personal_data_indicator import PersonalDataIndicatorModel
 from waivern_schemas.standard_input import (
@@ -39,6 +45,34 @@ OUTPUT_SCHEMA = Schema("personal_data_indicator", "1.0.0")
 INPUT_SCHEMA = Schema("standard_input", "1.0.0")
 RUN_ID = "test-run-id"
 
+# =============================================================================
+# Synthetic rules
+# =============================================================================
+
+RULE_EMAIL = PersonalDataIndicatorRule(
+    name="Email Address",
+    description="Email address detection",
+    category="email",
+    patterns=("email",),
+)
+
+RULE_PHONE = PersonalDataIndicatorRule(
+    name="Phone Number",
+    description="Phone number detection",
+    category="phone",
+    patterns=("phone",),
+)
+
+SYNTHETIC_RULES = (RULE_EMAIL, RULE_PHONE)
+
+_UNUSED_RULESET_URI = "unused/test/1.0.0"
+
+
+def _mock_get_rules(
+    uri: str, rule_type: type[PersonalDataIndicatorRule]
+) -> tuple[PersonalDataIndicatorRule, ...]:
+    return SYNTHETIC_RULES
+
 
 # =============================================================================
 # Helpers
@@ -48,9 +82,7 @@ RUN_ID = "test-run-id"
 def _make_config(enable_llm: bool = True) -> PersonalDataAnalyserConfig:
     """Build a PersonalDataAnalyserConfig for tests."""
     return PersonalDataAnalyserConfig(
-        pattern_matching=PatternMatchingConfig(
-            ruleset="local/personal_data_indicator/1.0.0"
-        ),
+        pattern_matching=PatternMatchingConfig(ruleset=_UNUSED_RULESET_URI),
         llm_validation=LLMValidationConfig(
             enable_llm_validation=enable_llm,
             llm_validation_mode="standard",
@@ -152,6 +184,11 @@ def _build_llm_dispatch_result(
 class TestPrepare:
     """Tests for prepare() — pattern matching and request building."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_ruleset_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Inject synthetic rules so the analyser doesn't need real rulesets."""
+        monkeypatch.setattr(RulesetManager, "get_rules", _mock_get_rules)
+
     def test_no_findings_returns_empty_requests(self) -> None:
         """No pattern matches → empty requests and orchestrator_state=None."""
         analyser = _make_analyser()
@@ -203,6 +240,11 @@ class TestPrepare:
 
 class TestFinalise:
     """Tests for finalise() — result interpretation and output building."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_ruleset_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Inject synthetic rules so the analyser doesn't need real rulesets."""
+        monkeypatch.setattr(RulesetManager, "get_rules", _mock_get_rules)
 
     def test_llm_disabled_produces_output_without_validation_summary(self) -> None:
         """llm_enabled=False state → output message with no validation_summary."""
@@ -296,6 +338,11 @@ class TestFinalise:
 
 class TestDeserialise:
     """Tests for deserialise_prepare_result() round-trip fidelity."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_ruleset_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Inject synthetic rules so the analyser doesn't need real rulesets."""
+        monkeypatch.setattr(RulesetManager, "get_rules", _mock_get_rules)
 
     def test_round_trip_with_llm_request(self) -> None:
         """prepare() → model_dump → deserialise → equivalent state and request.

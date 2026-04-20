@@ -11,7 +11,7 @@ to make intelligent decisions about whether matches are genuine data subject ind
 
 from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.types import PatternMatchingConfig, PatternMatchResult
-from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
+from waivern_analysers_shared.utilities import EvidenceExtractor
 from waivern_core.schemas import PatternMatchDetail
 from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 from waivern_schemas.connector_types import BaseMetadata
@@ -26,20 +26,26 @@ from .confidence_scorer import DataSubjectConfidenceScorer
 class DataSubjectPatternMatcher:
     """Pattern matcher for data subject classification.
 
-    This class provides pattern matching functionality specifically for data subject
-    detection, creating structured findings with confidence scoring.
+    Accepts pre-loaded rules via constructor for explicit dependency injection.
+    The analyser is responsible for loading rules from the ruleset manager
+    and passing them here.
     """
 
-    def __init__(self, config: PatternMatchingConfig) -> None:
-        """Initialise the pattern matcher with configuration.
+    def __init__(
+        self,
+        rules: tuple[DataSubjectIndicatorRule, ...],
+        config: PatternMatchingConfig,
+    ) -> None:
+        """Initialise the pattern matcher with rules and configuration.
 
         Args:
-            config: Pattern matching configuration
+            rules: Pre-loaded data subject indicator rules.
+            config: Pattern matching configuration.
 
         """
+        self._rules = rules
         self._config = config
         self._evidence_extractor = EvidenceExtractor()
-        self._ruleset_manager = RulesetManager()
         self._confidence_scorer = DataSubjectConfidenceScorer()
         self._dispatcher = RulePatternDispatcher()
 
@@ -59,9 +65,6 @@ class DataSubjectPatternMatcher:
         if not content.strip():
             return []
 
-        rules = self._ruleset_manager.get_rules(
-            self._config.ruleset, DataSubjectIndicatorRule
-        )
         indicators: list[DataSubjectIndicatorModel] = []
 
         # Group matched rules and results by subject category for confidence calculation
@@ -70,7 +73,7 @@ class DataSubjectPatternMatcher:
         ] = {}
 
         # Find all matching rules and track results
-        for rule in rules:
+        for rule in self._rules:
             results = self._dispatcher.find_matches(
                 content,
                 rule,

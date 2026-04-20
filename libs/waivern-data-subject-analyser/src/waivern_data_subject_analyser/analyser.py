@@ -6,15 +6,18 @@ from collections.abc import Sequence
 from types import ModuleType
 from typing import Any, override
 
+from waivern_analysers_shared import SchemaInputHandler
 from waivern_analysers_shared.llm_validation import ValidationOrchestrator
 from waivern_analysers_shared.llm_validation.validation_orchestrator import (
     FallbackNeeded,
 )
+from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import Analyser, InputRequirement
 from waivern_core.dispatch import DispatchRequest, DispatchResult, PrepareResult
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_llm.types import LLMDispatchResult, LLMRequest
+from waivern_rulesets.data_subject_indicator import DataSubjectIndicatorRule
 from waivern_schemas.data_subject_indicator import DataSubjectIndicatorModel
 
 from .result_builder import DataSubjectResultBuilder
@@ -43,6 +46,9 @@ class DataSubjectAnalyser(Analyser):
 
         """
         self._config = config
+        self._rules = RulesetManager.get_rules(
+            config.pattern_matching.ruleset, DataSubjectIndicatorRule
+        )
         self._result_builder = DataSubjectResultBuilder(config)
         self._orchestrator: ValidationOrchestrator[DataSubjectIndicatorModel] = (
             create_validation_orchestrator(config.llm_validation)
@@ -239,9 +245,9 @@ class DataSubjectAnalyser(Analyser):
     ) -> list[DataSubjectIndicatorModel]:
         """Aggregate indicators across input messages (fan-in).
 
-        Loads the reader/handler once per schema and applies it to each
-        message with that schema. Supports mixed-schema fan-in (standard_input
-        and source_code messages in the same call).
+        Loads the reader and handler once per input schema and reuses them
+        for all messages with the same schema. Supports mixed-schema fan-in
+        (standard_input and source_code messages in the same call).
 
         Args:
             inputs: List of input messages (same or mixed schemas).
@@ -250,15 +256,20 @@ class DataSubjectAnalyser(Analyser):
             Flattened list of all indicators from all inputs.
 
         """
-        readers_by_schema: dict[tuple[str, str], ModuleType] = {}
+        # Cache (reader_module, handler) per schema to avoid redundant
+        # imports and object creation when multiple messages share a schema.
+        cache_by_schema: dict[
+            tuple[str, str],
+            tuple[ModuleType, SchemaInputHandler[DataSubjectIndicatorModel]],
+        ] = {}
         findings: list[DataSubjectIndicatorModel] = []
         for message in inputs:
             schema_key = (message.schema.name, message.schema.version)
-            reader = readers_by_schema.get(schema_key)
-            if reader is None:
+            if schema_key not in cache_by_schema:
                 reader = self._load_reader(message.schema)
-                readers_by_schema[schema_key] = reader
-            handler = reader.create_handler(self._config)
+                handler = reader.create_handler(self._config, self._rules)
+                cache_by_schema[schema_key] = (reader, handler)
+            reader, handler = cache_by_schema[schema_key]
             input_data = reader.read(message.content)
             findings.extend(handler.analyse(input_data))
         return findings

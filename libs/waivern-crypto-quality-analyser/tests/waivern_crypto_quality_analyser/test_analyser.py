@@ -1,12 +1,97 @@
-"""Unit tests for CryptoQualityAnalyser."""
+"""Unit tests for CryptoQualityAnalyser.
+
+Uses synthetic rules via monkeypatched RulesetManager to decouple from
+production ruleset data.
+"""
 
 import pytest
+from waivern_analysers_shared.types import PatternMatchingConfig
+from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import AnalyserContractTests
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
+from waivern_rulesets.crypto_quality_indicator import CryptoQualityIndicatorRule
 
 from waivern_crypto_quality_analyser.analyser import CryptoQualityAnalyser
 from waivern_crypto_quality_analyser.types import CryptoQualityAnalyserConfig
+
+# =============================================================================
+# Synthetic rules
+# =============================================================================
+
+RULE_STRONG = CryptoQualityIndicatorRule(
+    name="Test Strong Algo",
+    description="Strong algorithm detection",
+    category="strong_algo",
+    algorithm="test_strong",
+    quality_rating="strong",
+    patterns=("test_strong_pattern",),
+)
+
+RULE_WEAK = CryptoQualityIndicatorRule(
+    name="Test Weak Algo",
+    description="Weak algorithm detection",
+    category="weak_algo",
+    algorithm="test_weak",
+    quality_rating="weak",
+    patterns=("test_weak_pattern",),
+)
+
+RULE_DEPRECATED = CryptoQualityIndicatorRule(
+    name="Test Deprecated Algo",
+    description="Deprecated algorithm detection",
+    category="deprecated_algo",
+    algorithm="test_deprecated",
+    quality_rating="deprecated",
+    patterns=("test_deprecated_pattern",),
+)
+
+SYNTHETIC_RULES = (RULE_STRONG, RULE_WEAK, RULE_DEPRECATED)
+
+_UNUSED_RULESET_URI = "unused/test/1.0.0"
+
+
+def _mock_get_rules(
+    uri: str, rule_type: type[CryptoQualityIndicatorRule]
+) -> tuple[CryptoQualityIndicatorRule, ...]:
+    return SYNTHETIC_RULES
+
+
+# =============================================================================
+# Helpers
+# =============================================================================
+
+OUTPUT_SCHEMA = Schema("crypto_quality_indicator", "1.0.0")
+INPUT_SCHEMA = Schema("standard_input", "1.0.0")
+
+
+def _make_config() -> CryptoQualityAnalyserConfig:
+    """Build a CryptoQualityAnalyserConfig with synthetic ruleset URI."""
+    return CryptoQualityAnalyserConfig(
+        pattern_matching=PatternMatchingConfig(ruleset=_UNUSED_RULESET_URI),
+    )
+
+
+def _make_message(content: str) -> Message:
+    """Build a standard_input message carrying a single data item."""
+    return Message(
+        id="test-message",
+        content={
+            "schemaVersion": "1.0.0",
+            "name": "Test source",
+            "data": [
+                {
+                    "content": content,
+                    "metadata": {
+                        "source": "test.txt",
+                        "connector_type": "test",
+                    },
+                }
+            ],
+        },
+        schema=INPUT_SCHEMA,
+    )
+
 
 # =============================================================================
 # Contract tests
@@ -14,11 +99,7 @@ from waivern_crypto_quality_analyser.types import CryptoQualityAnalyserConfig
 
 
 class TestCryptoQualityAnalyserContract(AnalyserContractTests[CryptoQualityAnalyser]):
-    """Contract tests for CryptoQualityAnalyser.
-
-    Inherits from AnalyserContractTests to verify that CryptoQualityAnalyser
-    meets the Analyser interface contract.
-    """
+    """Contract tests for CryptoQualityAnalyser."""
 
     @pytest.fixture
     def processor_class(self) -> type[CryptoQualityAnalyser]:
@@ -32,171 +113,58 @@ class TestCryptoQualityAnalyserContract(AnalyserContractTests[CryptoQualityAnaly
 
 
 class TestCryptoQualityPolarity:
-    """Tests for polarity assignment and algorithm field derivation."""
+    """Tests for polarity assignment based on quality_rating."""
 
-    @pytest.fixture
-    def valid_config(self) -> CryptoQualityAnalyserConfig:
-        """Return default configuration using local crypto_quality_indicator ruleset."""
-        return CryptoQualityAnalyserConfig()
+    @pytest.fixture(autouse=True)
+    def _mock_ruleset_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Inject synthetic rules so the analyser doesn't need real rulesets."""
+        monkeypatch.setattr(RulesetManager, "get_rules", _mock_get_rules)
 
-    @pytest.fixture
-    def deprecated_input_message(self) -> Message:
-        """Input message containing a deprecated algorithm reference."""
-        return Message(
-            id="test_deprecated",
-            content={
-                "schemaVersion": "1.0.0",
-                "name": "Test source",
-                "data": [
-                    {
-                        "content": "password_hash = md5(password)",
-                        "metadata": {
-                            "source": "auth.php",
-                            "connector_type": "filesystem",
-                        },
-                    }
-                ],
-            },
-            schema=Schema("standard_input", "1.0.0"),
-        )
+    def test_deprecated_algorithm_produces_negative_polarity(self) -> None:
+        """A deprecated algorithm yields polarity=negative."""
+        analyser = CryptoQualityAnalyser(config=_make_config())
+        message = _make_message("Using test_deprecated_pattern for hashing")
 
-    @pytest.fixture
-    def strong_input_message(self) -> Message:
-        """Input message containing a strong algorithm reference."""
-        return Message(
-            id="test_strong",
-            content={
-                "schemaVersion": "1.0.0",
-                "name": "Test source",
-                "data": [
-                    {
-                        "content": "hashed = bcrypt.hashpw(password, bcrypt.gensalt())",
-                        "metadata": {
-                            "source": "auth.php",
-                            "connector_type": "filesystem",
-                        },
-                    }
-                ],
-            },
-            schema=Schema("standard_input", "1.0.0"),
-        )
-
-    @pytest.fixture
-    def weak_input_message(self) -> Message:
-        """Input message containing a weak algorithm reference."""
-        return Message(
-            id="test_weak",
-            content={
-                "schemaVersion": "1.0.0",
-                "name": "Test source",
-                "data": [
-                    {
-                        "content": "cipher = blowfish.new(key)",
-                        "metadata": {
-                            "source": "crypto.php",
-                            "connector_type": "filesystem",
-                        },
-                    }
-                ],
-            },
-            schema=Schema("standard_input", "1.0.0"),
-        )
-
-    @pytest.fixture
-    def output_schema(self) -> Schema:
-        """Return the standard output schema for crypto_quality_indicator."""
-        return Schema("crypto_quality_indicator", "1.0.0")
-
-    def test_deprecated_algorithm_produces_negative_polarity(
-        self,
-        valid_config: CryptoQualityAnalyserConfig,
-        deprecated_input_message: Message,
-        output_schema: Schema,
-    ) -> None:
-        """A deprecated algorithm (md5) yields polarity=negative."""
-        analyser = CryptoQualityAnalyser(valid_config)
-        result = analyser.process([deprecated_input_message], output_schema)
+        result = analyser.process([message], OUTPUT_SCHEMA)
 
         findings = result.content["findings"]
-        assert len(findings) >= 1
-        md5_finding = next(f for f in findings if f["algorithm"] == "md5")
-        assert md5_finding["polarity"] == "negative"
-        assert md5_finding["quality_rating"] == "deprecated"
+        assert len(findings) == 1
+        assert findings[0]["algorithm"] == "test_deprecated"
+        assert findings[0]["polarity"] == "negative"
+        assert findings[0]["quality_rating"] == "deprecated"
 
-    def test_strong_algorithm_produces_positive_polarity(
-        self,
-        valid_config: CryptoQualityAnalyserConfig,
-        strong_input_message: Message,
-        output_schema: Schema,
-    ) -> None:
-        """A strong algorithm (bcrypt) yields polarity=positive."""
-        analyser = CryptoQualityAnalyser(valid_config)
-        result = analyser.process([strong_input_message], output_schema)
+    def test_strong_algorithm_produces_positive_polarity(self) -> None:
+        """A strong algorithm yields polarity=positive."""
+        analyser = CryptoQualityAnalyser(config=_make_config())
+        message = _make_message("Using test_strong_pattern for hashing")
+
+        result = analyser.process([message], OUTPUT_SCHEMA)
 
         findings = result.content["findings"]
-        assert len(findings) >= 1
-        bcrypt_finding = next(f for f in findings if f["algorithm"] == "bcrypt")
-        assert bcrypt_finding["polarity"] == "positive"
-        assert bcrypt_finding["quality_rating"] == "strong"
+        assert len(findings) == 1
+        assert findings[0]["algorithm"] == "test_strong"
+        assert findings[0]["polarity"] == "positive"
+        assert findings[0]["quality_rating"] == "strong"
 
-    def test_weak_algorithm_produces_negative_polarity(
-        self,
-        valid_config: CryptoQualityAnalyserConfig,
-        weak_input_message: Message,
-        output_schema: Schema,
-    ) -> None:
-        """A weak algorithm (blowfish) yields polarity=negative."""
-        analyser = CryptoQualityAnalyser(valid_config)
-        result = analyser.process([weak_input_message], output_schema)
+    def test_weak_algorithm_produces_negative_polarity(self) -> None:
+        """A weak algorithm yields polarity=negative."""
+        analyser = CryptoQualityAnalyser(config=_make_config())
+        message = _make_message("Using test_weak_pattern for encryption")
+
+        result = analyser.process([message], OUTPUT_SCHEMA)
 
         findings = result.content["findings"]
-        assert len(findings) >= 1
-        blowfish_finding = next(f for f in findings if f["algorithm"] == "blowfish")
-        assert blowfish_finding["polarity"] == "negative"
-        assert blowfish_finding["quality_rating"] == "weak"
+        assert len(findings) == 1
+        assert findings[0]["algorithm"] == "test_weak"
+        assert findings[0]["polarity"] == "negative"
+        assert findings[0]["quality_rating"] == "weak"
 
-    def test_algorithm_field_matches_rule_algorithm(
-        self,
-        valid_config: CryptoQualityAnalyserConfig,
-        deprecated_input_message: Message,
-        output_schema: Schema,
-    ) -> None:
-        """Finding.algorithm matches the canonical name from the ruleset."""
-        analyser = CryptoQualityAnalyser(valid_config)
-        result = analyser.process([deprecated_input_message], output_schema)
-
-        findings = result.content["findings"]
-        assert len(findings) >= 1
-        # The ruleset YAML defines algorithm="md5" for the md5 rule;
-        # the pattern "md5" in content triggers it.
-        assert any(f["algorithm"] == "md5" for f in findings)
-
-    def test_no_crypto_patterns_produces_no_findings(
-        self,
-        valid_config: CryptoQualityAnalyserConfig,
-        output_schema: Schema,
-    ) -> None:
+    def test_no_crypto_patterns_produces_no_findings(self) -> None:
         """Content with no recognised algorithm patterns produces zero findings."""
-        analyser = CryptoQualityAnalyser(valid_config)
-        message = Message(
-            id="test_no_patterns",
-            content={
-                "schemaVersion": "1.0.0",
-                "name": "Clean source",
-                "data": [
-                    {
-                        "content": "x = a + b",
-                        "metadata": {
-                            "source": "math.php",
-                            "connector_type": "filesystem",
-                        },
-                    }
-                ],
-            },
-            schema=Schema("standard_input", "1.0.0"),
-        )
+        analyser = CryptoQualityAnalyser(config=_make_config())
+        message = _make_message("x = a + b")
 
-        result = analyser.process([message], output_schema)
+        result = analyser.process([message], OUTPUT_SCHEMA)
 
         assert result.content["findings"] == []
         assert result.content["summary"]["total_findings"] == 0
@@ -210,63 +178,31 @@ class TestCryptoQualityPolarity:
 class TestCryptoQualityOutputStructure:
     """Tests for the shape and schema compliance of the output message."""
 
-    @pytest.fixture
-    def valid_config(self) -> CryptoQualityAnalyserConfig:
-        """Return default configuration using local crypto_quality_indicator ruleset."""
-        return CryptoQualityAnalyserConfig()
+    @pytest.fixture(autouse=True)
+    def _mock_ruleset_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Inject synthetic rules so the analyser doesn't need real rulesets."""
+        monkeypatch.setattr(RulesetManager, "get_rules", _mock_get_rules)
 
-    @pytest.fixture
-    def deprecated_input_message(self) -> Message:
-        """Input message containing a deprecated algorithm reference."""
-        return Message(
-            id="test_deprecated",
-            content={
-                "schemaVersion": "1.0.0",
-                "name": "Test source",
-                "data": [
-                    {
-                        "content": "password_hash = md5(password)",
-                        "metadata": {
-                            "source": "auth.php",
-                            "connector_type": "filesystem",
-                        },
-                    }
-                ],
-            },
-            schema=Schema("standard_input", "1.0.0"),
-        )
-
-    @pytest.fixture
-    def output_schema(self) -> Schema:
-        """Return the standard output schema for crypto_quality_indicator."""
-        return Schema("crypto_quality_indicator", "1.0.0")
-
-    def test_process_returns_valid_output_message_structure(
-        self,
-        valid_config: CryptoQualityAnalyserConfig,
-        deprecated_input_message: Message,
-        output_schema: Schema,
-    ) -> None:
+    def test_process_returns_valid_output_message_structure(self) -> None:
         """process() returns a Message with the correct schema and content keys."""
-        analyser = CryptoQualityAnalyser(valid_config)
-        result = analyser.process([deprecated_input_message], output_schema)
+        analyser = CryptoQualityAnalyser(config=_make_config())
+        message = _make_message("Using test_strong_pattern for hashing")
+
+        result = analyser.process([message], OUTPUT_SCHEMA)
 
         assert isinstance(result, Message)
-        assert result.schema == output_schema
+        assert result.schema == OUTPUT_SCHEMA
         assert "findings" in result.content
         assert "summary" in result.content
         assert "analysis_metadata" in result.content
         assert isinstance(result.content["findings"], list)
 
-    def test_summary_total_findings_matches_findings_count(
-        self,
-        valid_config: CryptoQualityAnalyserConfig,
-        deprecated_input_message: Message,
-        output_schema: Schema,
-    ) -> None:
+    def test_summary_total_findings_matches_findings_count(self) -> None:
         """summary.total_findings equals len(findings)."""
-        analyser = CryptoQualityAnalyser(valid_config)
-        result = analyser.process([deprecated_input_message], output_schema)
+        analyser = CryptoQualityAnalyser(config=_make_config())
+        message = _make_message("Using test_strong_pattern for hashing")
+
+        result = analyser.process([message], OUTPUT_SCHEMA)
 
         findings = result.content["findings"]
         summary = result.content["summary"]
@@ -281,76 +217,20 @@ class TestCryptoQualityOutputStructure:
 class TestCryptoQualityFanIn:
     """Tests for fan-in: multiple input messages produce merged findings."""
 
-    @pytest.fixture
-    def valid_config(self) -> CryptoQualityAnalyserConfig:
-        """Return default configuration using local crypto_quality_indicator ruleset."""
-        return CryptoQualityAnalyserConfig()
+    @pytest.fixture(autouse=True)
+    def _mock_ruleset_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Inject synthetic rules so the analyser doesn't need real rulesets."""
+        monkeypatch.setattr(RulesetManager, "get_rules", _mock_get_rules)
 
-    @pytest.fixture
-    def deprecated_input_message(self) -> Message:
-        """Input message containing a deprecated algorithm reference."""
-        return Message(
-            id="test_deprecated",
-            content={
-                "schemaVersion": "1.0.0",
-                "name": "Test source",
-                "data": [
-                    {
-                        "content": "password_hash = md5(password)",
-                        "metadata": {
-                            "source": "auth.php",
-                            "connector_type": "filesystem",
-                        },
-                    }
-                ],
-            },
-            schema=Schema("standard_input", "1.0.0"),
-        )
-
-    @pytest.fixture
-    def strong_input_message(self) -> Message:
-        """Input message containing a strong algorithm reference."""
-        return Message(
-            id="test_strong",
-            content={
-                "schemaVersion": "1.0.0",
-                "name": "Test source",
-                "data": [
-                    {
-                        "content": "hashed = bcrypt.hashpw(password, bcrypt.gensalt())",
-                        "metadata": {
-                            "source": "auth.php",
-                            "connector_type": "filesystem",
-                        },
-                    }
-                ],
-            },
-            schema=Schema("standard_input", "1.0.0"),
-        )
-
-    @pytest.fixture
-    def output_schema(self) -> Schema:
-        """Return the standard output schema for crypto_quality_indicator."""
-        return Schema("crypto_quality_indicator", "1.0.0")
-
-    def test_process_merges_findings_from_multiple_inputs(
-        self,
-        valid_config: CryptoQualityAnalyserConfig,
-        deprecated_input_message: Message,
-        strong_input_message: Message,
-        output_schema: Schema,
-    ) -> None:
+    def test_process_merges_findings_from_multiple_inputs(self) -> None:
         """Findings from multiple input messages are all present in the output."""
-        analyser = CryptoQualityAnalyser(valid_config)
-        result = analyser.process(
-            [deprecated_input_message, strong_input_message], output_schema
-        )
+        analyser = CryptoQualityAnalyser(config=_make_config())
+        msg_deprecated = _make_message("Using test_deprecated_pattern for hashing")
+        msg_strong = _make_message("Using test_strong_pattern for encryption")
+
+        result = analyser.process([msg_deprecated, msg_strong], OUTPUT_SCHEMA)
 
         findings = result.content["findings"]
         algorithms = {f["algorithm"] for f in findings}
-        assert "md5" in algorithms, (
-            "Findings from deprecated_input_message should be present"
-        )
-        assert "bcrypt" in algorithms, (
-            "Findings from strong_input_message should be present"
-        )
+        assert "test_deprecated" in algorithms
+        assert "test_strong" in algorithms
