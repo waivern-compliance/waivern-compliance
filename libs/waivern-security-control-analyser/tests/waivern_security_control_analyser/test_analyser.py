@@ -1,12 +1,89 @@
-"""Unit tests for SecurityControlAnalyser."""
+"""Unit tests for SecurityControlAnalyser.
+
+Uses synthetic rules via monkeypatched RulesetManager to decouple from
+production ruleset data.
+"""
 
 import pytest
+from waivern_analysers_shared.types import PatternMatchingConfig
+from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import AnalyserContractTests
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
+from waivern_rulesets.security_control_indicator import SecurityControlIndicatorRule
+from waivern_schemas.security_domain import SecurityDomain
 
 from waivern_security_control_analyser.analyser import SecurityControlAnalyser
 from waivern_security_control_analyser.types import SecurityControlAnalyserConfig
+
+# =============================================================================
+# Synthetic rules
+# =============================================================================
+
+RULE_POSITIVE = SecurityControlIndicatorRule(
+    name="Test Positive Auth",
+    description="Positive authentication control detection",
+    category="positive_auth",
+    security_domain=SecurityDomain.AUTHENTICATION,
+    polarity="positive",
+    patterns=("test_positive_auth_pattern",),
+)
+
+RULE_NEGATIVE = SecurityControlIndicatorRule(
+    name="Test Negative Network",
+    description="Negative network security control detection",
+    category="negative_network",
+    security_domain=SecurityDomain.NETWORK_SECURITY,
+    polarity="negative",
+    patterns=("test_negative_network_pattern",),
+)
+
+SYNTHETIC_RULES = (RULE_POSITIVE, RULE_NEGATIVE)
+
+_UNUSED_RULESET_URI = "unused/test/1.0.0"
+
+
+def _mock_get_rules(
+    uri: str, rule_type: type[SecurityControlIndicatorRule]
+) -> tuple[SecurityControlIndicatorRule, ...]:
+    return SYNTHETIC_RULES
+
+
+# =============================================================================
+# Helpers
+# =============================================================================
+
+OUTPUT_SCHEMA = Schema("security_evidence", "1.0.0")
+INPUT_SCHEMA = Schema("standard_input", "1.0.0")
+
+
+def _make_config() -> SecurityControlAnalyserConfig:
+    """Build a SecurityControlAnalyserConfig with synthetic ruleset URI."""
+    return SecurityControlAnalyserConfig(
+        pattern_matching=PatternMatchingConfig(ruleset=_UNUSED_RULESET_URI),
+    )
+
+
+def _make_message(content: str) -> Message:
+    """Build a standard_input message carrying a single data item."""
+    return Message(
+        id="test-message",
+        content={
+            "schemaVersion": "1.0.0",
+            "name": "Test source",
+            "data": [
+                {
+                    "content": content,
+                    "metadata": {
+                        "source": "test.php",
+                        "connector_type": "test",
+                    },
+                }
+            ],
+        },
+        schema=INPUT_SCHEMA,
+    )
+
 
 # =============================================================================
 # Contract tests
@@ -32,136 +109,41 @@ class TestSecurityControlAnalyserContract(
 class TestSecurityControlPolarity:
     """Tests for polarity and security_domain assignment."""
 
-    @pytest.fixture
-    def valid_config(self) -> SecurityControlAnalyserConfig:
-        """Return default configuration using local security_control_indicator ruleset."""
-        return SecurityControlAnalyserConfig()
+    @pytest.fixture(autouse=True)
+    def _mock_ruleset_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Inject synthetic rules so the analyser doesn't need real rulesets."""
+        monkeypatch.setattr(RulesetManager, "get_rules", _mock_get_rules)
 
-    @pytest.fixture
-    def output_schema(self) -> Schema:
-        """Return the standard output schema for security_evidence."""
-        return Schema("security_evidence", "1.0.0")
-
-    def test_positive_pattern_produces_positive_polarity(
-        self,
-        valid_config: SecurityControlAnalyserConfig,
-        output_schema: Schema,
-    ) -> None:
+    def test_positive_pattern_produces_positive_polarity(self) -> None:
         """A positive-polarity rule match yields polarity=positive in the finding."""
-        analyser = SecurityControlAnalyser(valid_config)
-        message = Message(
-            id="test_positive",
-            content={
-                "schemaVersion": "1.0.0",
-                "name": "Test source",
-                "data": [
-                    {
-                        "content": "db.prepared_statement($query, [$id])",
-                        "metadata": {
-                            "source": "db.php",
-                            "connector_type": "filesystem",
-                        },
-                    }
-                ],
-            },
-            schema=Schema("standard_input", "1.0.0"),
-        )
+        analyser = SecurityControlAnalyser(config=_make_config())
+        message = _make_message("Using test_positive_auth_pattern for login")
 
-        result = analyser.process([message], output_schema)
+        result = analyser.process([message], OUTPUT_SCHEMA)
 
         findings = result.content["findings"]
-        assert len(findings) >= 1
-        assert any(f["polarity"] == "positive" for f in findings)
+        assert len(findings) == 1
+        assert findings[0]["polarity"] == "positive"
+        assert findings[0]["security_domain"] == "authentication"
 
-    def test_negative_pattern_produces_negative_polarity(
-        self,
-        valid_config: SecurityControlAnalyserConfig,
-        output_schema: Schema,
-    ) -> None:
+    def test_negative_pattern_produces_negative_polarity(self) -> None:
         """A negative-polarity rule match yields polarity=negative in the finding."""
-        analyser = SecurityControlAnalyser(valid_config)
-        message = Message(
-            id="test_negative",
-            content={
-                "schemaVersion": "1.0.0",
-                "name": "Test source",
-                "data": [
-                    {
-                        "content": "shell_exec($user_command)",
-                        "metadata": {
-                            "source": "exec.php",
-                            "connector_type": "filesystem",
-                        },
-                    }
-                ],
-            },
-            schema=Schema("standard_input", "1.0.0"),
-        )
+        analyser = SecurityControlAnalyser(config=_make_config())
+        message = _make_message("Using test_negative_network_pattern in firewall")
 
-        result = analyser.process([message], output_schema)
+        result = analyser.process([message], OUTPUT_SCHEMA)
 
         findings = result.content["findings"]
-        assert len(findings) >= 1
-        assert any(f["polarity"] == "negative" for f in findings)
+        assert len(findings) == 1
+        assert findings[0]["polarity"] == "negative"
+        assert findings[0]["security_domain"] == "network_security"
 
-    def test_security_domain_taken_from_rule(
-        self,
-        valid_config: SecurityControlAnalyserConfig,
-        output_schema: Schema,
-    ) -> None:
-        """The security_domain in the finding matches the matched rule's domain."""
-        analyser = SecurityControlAnalyser(valid_config)
-        # audit_log is in the logging_monitoring domain (positive)
-        message = Message(
-            id="test_domain",
-            content={
-                "schemaVersion": "1.0.0",
-                "name": "Test source",
-                "data": [
-                    {
-                        "content": "audit_log($user, $action)",
-                        "metadata": {
-                            "source": "audit.php",
-                            "connector_type": "filesystem",
-                        },
-                    }
-                ],
-            },
-            schema=Schema("standard_input", "1.0.0"),
-        )
+    def test_no_matching_patterns_produces_no_findings(self) -> None:
+        """Content with no recognised patterns produces zero findings."""
+        analyser = SecurityControlAnalyser(config=_make_config())
+        message = _make_message("x = a + b")
 
-        result = analyser.process([message], output_schema)
-
-        findings = result.content["findings"]
-        assert len(findings) >= 1
-        assert any(f["security_domain"] == "logging_monitoring" for f in findings)
-
-    def test_no_matching_patterns_produces_no_findings(
-        self,
-        valid_config: SecurityControlAnalyserConfig,
-        output_schema: Schema,
-    ) -> None:
-        """Content with no ruleset patterns produces zero findings."""
-        analyser = SecurityControlAnalyser(valid_config)
-        message = Message(
-            id="test_no_patterns",
-            content={
-                "schemaVersion": "1.0.0",
-                "name": "Clean source",
-                "data": [
-                    {
-                        "content": "x = a + b",
-                        "metadata": {
-                            "source": "math.php",
-                            "connector_type": "filesystem",
-                        },
-                    }
-                ],
-            },
-            schema=Schema("standard_input", "1.0.0"),
-        )
-
-        result = analyser.process([message], output_schema)
+        result = analyser.process([message], OUTPUT_SCHEMA)
 
         assert result.content["findings"] == []
         assert result.content["summary"]["total_findings"] == 0
@@ -175,82 +157,38 @@ class TestSecurityControlPolarity:
 class TestSecurityControlOutputStructure:
     """Tests for the shape and schema compliance of the output message."""
 
-    @pytest.fixture
-    def valid_config(self) -> SecurityControlAnalyserConfig:
-        """Return default configuration using local security_control_indicator ruleset."""
-        return SecurityControlAnalyserConfig()
+    @pytest.fixture(autouse=True)
+    def _mock_ruleset_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Inject synthetic rules so the analyser doesn't need real rulesets."""
+        monkeypatch.setattr(RulesetManager, "get_rules", _mock_get_rules)
 
-    @pytest.fixture
-    def output_schema(self) -> Schema:
-        """Return the standard output schema for security_evidence."""
-        return Schema("security_evidence", "1.0.0")
-
-    def test_process_returns_valid_security_evidence_message(
-        self,
-        valid_config: SecurityControlAnalyserConfig,
-        output_schema: Schema,
-    ) -> None:
+    def test_process_returns_valid_security_evidence_message(self) -> None:
         """process() returns a Message with security_evidence/1.0.0 schema and required keys."""
-        analyser = SecurityControlAnalyser(valid_config)
-        message = Message(
-            id="test_structure",
-            content={
-                "schemaVersion": "1.0.0",
-                "name": "Test source",
-                "data": [
-                    {
-                        "content": "bcrypt_hash($password)",
-                        "metadata": {
-                            "source": "auth.php",
-                            "connector_type": "filesystem",
-                        },
-                    }
-                ],
-            },
-            schema=Schema("standard_input", "1.0.0"),
-        )
+        analyser = SecurityControlAnalyser(config=_make_config())
+        message = _make_message("Using test_positive_auth_pattern for login")
 
-        result = analyser.process([message], output_schema)
+        result = analyser.process([message], OUTPUT_SCHEMA)
 
         assert isinstance(result, Message)
-        assert result.schema == output_schema
+        assert result.schema == OUTPUT_SCHEMA
         assert "findings" in result.content
         assert "summary" in result.content
         assert "analysis_metadata" in result.content
         assert isinstance(result.content["findings"], list)
 
-    def test_summary_counts_domains_correctly(
-        self,
-        valid_config: SecurityControlAnalyserConfig,
-        output_schema: Schema,
-    ) -> None:
+    def test_summary_counts_domains_correctly(self) -> None:
         """summary.domains reflects the actual security domains found."""
-        analyser = SecurityControlAnalyser(valid_config)
-        # bcrypt → authentication; audit_log → logging_monitoring
-        message = Message(
-            id="test_summary",
-            content={
-                "schemaVersion": "1.0.0",
-                "name": "Test source",
-                "data": [
-                    {
-                        "content": "bcrypt_hash($pw); audit_log($user, $action)",
-                        "metadata": {
-                            "source": "app.php",
-                            "connector_type": "filesystem",
-                        },
-                    }
-                ],
-            },
-            schema=Schema("standard_input", "1.0.0"),
+        analyser = SecurityControlAnalyser(config=_make_config())
+        message = _make_message(
+            "test_positive_auth_pattern and test_negative_network_pattern"
         )
 
-        result = analyser.process([message], output_schema)
+        result = analyser.process([message], OUTPUT_SCHEMA)
 
         summary = result.content["summary"]
         domain_names = {d["security_domain"] for d in summary["domains"]}
         assert "authentication" in domain_names
-        assert "logging_monitoring" in domain_names
+        assert "network_security" in domain_names
         assert summary["domains_identified"] == len(summary["domains"])
 
 
@@ -262,23 +200,14 @@ class TestSecurityControlOutputStructure:
 class TestSecurityControlInputSchemas:
     """Tests for different input schema types."""
 
-    @pytest.fixture
-    def valid_config(self) -> SecurityControlAnalyserConfig:
-        """Return default configuration using local security_control_indicator ruleset."""
-        return SecurityControlAnalyserConfig()
+    @pytest.fixture(autouse=True)
+    def _mock_ruleset_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Inject synthetic rules so the analyser doesn't need real rulesets."""
+        monkeypatch.setattr(RulesetManager, "get_rules", _mock_get_rules)
 
-    @pytest.fixture
-    def output_schema(self) -> Schema:
-        """Return the standard output schema for security_evidence."""
-        return Schema("security_evidence", "1.0.0")
-
-    def test_accepts_source_code_schema_input(
-        self,
-        valid_config: SecurityControlAnalyserConfig,
-        output_schema: Schema,
-    ) -> None:
+    def test_accepts_source_code_schema_input(self) -> None:
         """A source_code/1.0.0 input message is processed successfully."""
-        analyser = SecurityControlAnalyser(valid_config)
+        analyser = SecurityControlAnalyser(config=_make_config())
         message = Message(
             id="test_source_code",
             content={
@@ -295,7 +224,7 @@ class TestSecurityControlInputSchemas:
                     {
                         "file_path": "auth/login.php",
                         "language": "php",
-                        "raw_content": "bcrypt_hash($password)",
+                        "raw_content": "test_positive_auth_pattern here",
                         "metadata": {
                             "file_size": 100,
                             "line_count": 1,
@@ -307,10 +236,37 @@ class TestSecurityControlInputSchemas:
             schema=Schema("source_code", "1.0.0"),
         )
 
-        result = analyser.process([message], output_schema)
+        result = analyser.process([message], OUTPUT_SCHEMA)
 
         assert isinstance(result, Message)
-        assert result.schema == output_schema
+        assert result.schema == OUTPUT_SCHEMA
         findings = result.content["findings"]
-        assert len(findings) >= 1
+        assert len(findings) == 1
         assert findings[0]["metadata"]["source"] == "auth/login.php"
+
+
+# =============================================================================
+# Fan-in (multiple input messages)
+# =============================================================================
+
+
+class TestSecurityControlFanIn:
+    """Tests for fan-in: multiple input messages produce merged findings."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_ruleset_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Inject synthetic rules so the analyser doesn't need real rulesets."""
+        monkeypatch.setattr(RulesetManager, "get_rules", _mock_get_rules)
+
+    def test_process_merges_findings_from_multiple_inputs(self) -> None:
+        """Findings from multiple input messages are all present in the output."""
+        analyser = SecurityControlAnalyser(config=_make_config())
+        msg_positive = _make_message("Using test_positive_auth_pattern for login")
+        msg_negative = _make_message("Using test_negative_network_pattern in firewall")
+
+        result = analyser.process([msg_positive, msg_negative], OUTPUT_SCHEMA)
+
+        findings = result.content["findings"]
+        polarities = {f["polarity"] for f in findings}
+        assert "positive" in polarities
+        assert "negative" in polarities

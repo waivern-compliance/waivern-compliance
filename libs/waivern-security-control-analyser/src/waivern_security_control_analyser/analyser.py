@@ -5,9 +5,11 @@ import logging
 from typing import override
 
 from waivern_analysers_shared import SchemaReader
+from waivern_analysers_shared.utilities import RulesetManager
 from waivern_core import Analyser, InputRequirement
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
+from waivern_rulesets.security_control_indicator import SecurityControlIndicatorRule
 from waivern_schemas.connector_types import BaseMetadata
 from waivern_schemas.security_evidence import SecurityEvidenceModel
 from waivern_schemas.standard_input import (
@@ -43,7 +45,12 @@ class SecurityControlAnalyser(Analyser):
 
         """
         self._config = config
-        self._pattern_matcher = SecurityControlPatternMatcher(config.pattern_matching)
+        rules = RulesetManager.get_rules(
+            config.pattern_matching.ruleset, SecurityControlIndicatorRule
+        )
+        self._pattern_matcher = SecurityControlPatternMatcher(
+            rules, config.pattern_matching
+        )
         self._result_builder = SecurityControlResultBuilder(config)
 
     @classmethod
