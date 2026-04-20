@@ -2,7 +2,7 @@
 
 from waivern_analysers_shared.matching import RulePatternDispatcher
 from waivern_analysers_shared.types import PatternMatchingConfig
-from waivern_analysers_shared.utilities import EvidenceExtractor, RulesetManager
+from waivern_analysers_shared.utilities import EvidenceExtractor
 from waivern_core.schemas import PatternMatchDetail
 from waivern_rulesets.personal_data_indicator import PersonalDataIndicatorRule
 from waivern_schemas.connector_types import BaseMetadata
@@ -15,20 +15,25 @@ from waivern_schemas.personal_data_indicator import (
 class PersonalDataPatternMatcher:
     """Pattern matcher for personal data analysis.
 
-    This class provides pattern matching functionality specifically for personal data
-    detection, creating structured indicators for the PersonalDataAnalyser.
+    Accepts rules via constructor to decouple from ruleset loading.
+    The analyser loads rules and passes them in at construction time.
     """
 
-    def __init__(self, config: PatternMatchingConfig) -> None:
-        """Initialise the pattern matcher with configuration.
+    def __init__(
+        self,
+        rules: tuple[PersonalDataIndicatorRule, ...],
+        config: PatternMatchingConfig,
+    ) -> None:
+        """Initialise the pattern matcher with rules and configuration.
 
         Args:
-            config: Pattern matching configuration
+            rules: Personal data indicator detection rules.
+            config: Pattern matching configuration for evidence extraction.
 
         """
+        self._rules = rules
         self._config = config
         self._evidence_extractor = EvidenceExtractor()
-        self._ruleset_manager = RulesetManager()
         self._dispatcher = RulePatternDispatcher()
 
     def find_patterns(
@@ -49,12 +54,9 @@ class PersonalDataPatternMatcher:
         if not content.strip():
             return []
 
-        rules = self._ruleset_manager.get_rules(
-            self._config.ruleset, PersonalDataIndicatorRule
-        )
         findings: list[PersonalDataIndicatorModel] = []
 
-        for rule in rules:
+        for rule in self._rules:
             results = self._dispatcher.find_matches(
                 content,
                 rule,
