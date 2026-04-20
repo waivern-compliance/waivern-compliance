@@ -34,16 +34,13 @@ def _mock_get_rules(
     return SYNTHETIC_RULES
 
 
-class TestDataSubjectAnalyserIdentity:
-    """DataSubjectAnalyser identity and construction."""
+class TestDataSubjectAnalyserConstruction:
+    """Tests that require analyser instantiation (and therefore rule loading)."""
 
     @pytest.fixture(autouse=True)
     def _mock_ruleset_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Inject synthetic rules so the analyser doesn't need real rulesets."""
         monkeypatch.setattr(RulesetManager, "get_rules", _mock_get_rules)
-
-    def test_get_name_returns_correct_identifier(self) -> None:
-        assert DataSubjectAnalyser.get_name() == "data_subject_analyser"
 
     def test_from_properties_creates_instance_with_defaults(self) -> None:
         config = DataSubjectAnalyserConfig.from_properties({})
@@ -54,7 +51,10 @@ class TestDataSubjectAnalyserIdentity:
 
 
 class TestDataSubjectAnalyserSchemaSupport:
-    """Static schema declarations."""
+    """Static schema declarations (no analyser instantiation needed)."""
+
+    def test_get_name_returns_correct_identifier(self) -> None:
+        assert DataSubjectAnalyser.get_name() == "data_subject_analyser"
 
     def test_get_input_requirements_includes_standard_input(self) -> None:
         input_requirements = DataSubjectAnalyser.get_input_requirements()
