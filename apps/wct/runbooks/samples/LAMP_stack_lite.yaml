@@ -24,8 +24,8 @@ artifacts:
     source:
       type: "filesystem"
       properties:
-        path: "./libs/waivern-filesystem/tests/waivern_filesystem/filesystem_mock_lite"
-        exclude_patterns: ["README_lite.md"]
+        path: "./libs/waivern-filesystem/tests/waivern_filesystem/filesystem_mock"
+        exclude_patterns: ["README.md"]
         max_files: 50
         encoding: "utf-8"
 
