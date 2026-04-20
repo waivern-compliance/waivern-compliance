@@ -171,7 +171,7 @@ class TestProximityBasedEvidenceCollection:
     def test_dense_matches_produce_single_evidence_item(
         self, metadata: BaseMetadata
     ) -> None:
-        """Dense matches of the same pattern produce single evidence item."""
+        """Dense matches within the proximity threshold produce a single evidence item."""
         matcher = DataSubjectPatternMatcher(
             rules=(RULE_EMPLOYEE_PRIMARY,),
             config=_make_config(
@@ -186,10 +186,10 @@ class TestProximityBasedEvidenceCollection:
         findings = matcher.find_patterns(content, metadata)
 
         assert len(findings) == 1
-        assert (
-            "3 match(es)" in findings[0].matched_patterns[0].pattern
-            or len(findings[0].evidence) >= 1
-        )
+        assert len(findings[0].evidence) == 1
+        # All three occurrences are counted despite single evidence item
+        total_matches = sum(p.match_count for p in findings[0].matched_patterns)
+        assert total_matches == 3
 
     def test_maximum_evidence_count_is_respected(self, metadata: BaseMetadata) -> None:
         """Evidence collection respects maximum_evidence_count limit."""
