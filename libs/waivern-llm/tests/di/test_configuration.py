@@ -13,6 +13,10 @@ from waivern_llm.di.configuration import LLMServiceConfiguration
 class TestLLMServiceConfiguration:
     """Test LLMServiceConfiguration class."""
 
+    # =================================================================
+    # Instantiation & Defaults
+    # =================================================================
+
     def test_configuration_can_be_instantiated_with_valid_provider_and_api_key(
         self,
     ) -> None:
@@ -24,6 +28,10 @@ class TestLLMServiceConfiguration:
         assert config.provider == "anthropic"
         assert config.api_key == "sk-test-key"
         assert config.model is None  # Optional field defaults to None
+
+    # =================================================================
+    # from_properties() — Environment Fallback
+    # =================================================================
 
     def test_from_properties_creates_configuration_from_valid_dictionary(self) -> None:
         """Test from_properties() factory method with explicit properties."""
@@ -90,6 +98,10 @@ class TestLLMServiceConfiguration:
             assert config.api_key == "explicit-anthropic-key"
             assert config.model == "claude-3-opus"
 
+    # =================================================================
+    # Validation
+    # =================================================================
+
     def test_validation_rejects_unsupported_provider(self) -> None:
         """Test only anthropic/openai/google accepted."""
         # Attempt to create configuration with unsupported provider
@@ -122,6 +134,10 @@ class TestLLMServiceConfiguration:
         except ValidationError as e:
             error_msg = str(e).lower()
             assert "api_key" in error_msg or "empty" in error_msg
+
+    # =================================================================
+    # Model & Default Model
+    # =================================================================
 
     def test_model_field_is_optional_with_provider_specific_defaults(self) -> None:
         """Test model has sensible defaults per provider."""
@@ -171,6 +187,10 @@ class TestLLMServiceConfiguration:
         assert config_google.model == "gemini-pro-vision"
         assert config_google.get_default_model() == "gemini-pro-vision"
 
+    # =================================================================
+    # Immutability
+    # =================================================================
+
     def test_configuration_is_immutable_inherits_from_base(self) -> None:
         """Test frozen behavior inherited correctly."""
         # Create configuration
@@ -214,6 +234,10 @@ class TestLLMServiceConfiguration:
         except ValidationError as e:
             error_msg = str(e).lower()
             assert "frozen" in error_msg or "immutable" in error_msg
+
+    # =================================================================
+    # Provider-Specific Environment Mapping
+    # =================================================================
 
     def test_from_properties_reads_provider_specific_api_key_from_environment(
         self,
@@ -295,6 +319,10 @@ class TestLLMServiceConfiguration:
             assert config.provider == "anthropic"
             assert config.base_url is None
 
+    # =================================================================
+    # Batch Mode
+    # =================================================================
+
     def test_batch_mode_defaults_to_false(self) -> None:
         """Test batch_mode field defaults to False when not specified."""
         config = LLMServiceConfiguration(provider="anthropic", api_key="test-key")
@@ -348,3 +376,69 @@ class TestLLMServiceConfiguration:
         ):
             config = LLMServiceConfiguration.from_properties({})
             assert config.batch_mode is False
+
+
+class TestSyncConcurrencyConfiguration:
+    """Tests for sync_concurrency configuration field."""
+
+    def test_sync_concurrency_defaults_to_none(self) -> None:
+        """sync_concurrency should default to None (unlimited) when not specified."""
+        config = LLMServiceConfiguration(provider="anthropic", api_key="test-key")
+
+        assert config.sync_concurrency is None
+
+    def test_sync_concurrency_can_be_set_explicitly(self) -> None:
+        """Explicit sync_concurrency value should be preserved."""
+        config = LLMServiceConfiguration(
+            provider="anthropic", api_key="test-key", sync_concurrency=3
+        )
+
+        assert config.sync_concurrency == 3
+
+    def test_sync_concurrency_validation_rejects_zero_and_negative_values(
+        self,
+    ) -> None:
+        """sync_concurrency=0 or negative should raise ValidationError."""
+        import pytest
+
+        with pytest.raises(ValidationError):
+            LLMServiceConfiguration(
+                provider="anthropic", api_key="test-key", sync_concurrency=0
+            )
+
+        with pytest.raises(ValidationError):
+            LLMServiceConfiguration(
+                provider="anthropic", api_key="test-key", sync_concurrency=-1
+            )
+
+    def test_from_properties_reads_sync_concurrency_from_environment(self) -> None:
+        """WAIVERN_LLM_SYNC_CONCURRENCY env var should be parsed as integer."""
+        with patch.dict(
+            os.environ,
+            {
+                "LLM_PROVIDER": "anthropic",
+                "ANTHROPIC_API_KEY": "test-key",
+                "WAIVERN_LLM_SYNC_CONCURRENCY": "2",
+            },
+            clear=True,
+        ):
+            config = LLMServiceConfiguration.from_properties({})
+
+            assert config.sync_concurrency == 2
+
+    def test_from_properties_ignores_non_numeric_sync_concurrency_env_var(
+        self,
+    ) -> None:
+        """Non-numeric WAIVERN_LLM_SYNC_CONCURRENCY should be treated as None."""
+        with patch.dict(
+            os.environ,
+            {
+                "LLM_PROVIDER": "anthropic",
+                "ANTHROPIC_API_KEY": "test-key",
+                "WAIVERN_LLM_SYNC_CONCURRENCY": "abc",
+            },
+            clear=True,
+        ):
+            config = LLMServiceConfiguration.from_properties({})
+
+            assert config.sync_concurrency is None

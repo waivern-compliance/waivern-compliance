@@ -687,3 +687,80 @@ class TestLLMDispatcherValidation:
 
         assert results == []
         provider.invoke_structured.assert_not_called()
+
+
+# =============================================================================
+# Sync Mode — Concurrency Limiting
+# =============================================================================
+
+
+class TestLLMDispatcherSyncConcurrency:
+    """Tests for sync_concurrency limiting in _execute_sync()."""
+
+    async def test_sync_concurrency_limits_concurrent_provider_calls(self) -> None:
+        """sync_concurrency=1 with multiple misses → max 1 call in-flight at any time."""
+        import asyncio
+
+        store = AsyncInMemoryStore()
+        peak_concurrency = 0
+        current_concurrency = 0
+
+        async def invoke_tracking(
+            _prompt: str, _response_model: type[MockResponse]
+        ) -> MockResponse:
+            nonlocal peak_concurrency, current_concurrency
+            current_concurrency += 1
+            peak_concurrency = max(peak_concurrency, current_concurrency)
+            await asyncio.sleep(0.01)  # Simulate work — lets event loop interleave
+            current_concurrency -= 1
+            return MockResponse(valid=True, reason="ok")
+
+        provider = Mock()
+        provider.model_name = "test-model"
+        provider.context_window = 4385  # 1 item per batch
+        provider.invoke_structured = AsyncMock(side_effect=invoke_tracking)
+
+        dispatcher = LLMDispatcher(provider=provider, store=store, sync_concurrency=1)
+        request = _create_request(item_count=3, run_id="run-1")
+        request.prompt_builder = _create_unique_prompt_builder()
+
+        results = await dispatcher.dispatch([request])
+
+        assert provider.invoke_structured.call_count == 3
+        assert len(results[0].responses) == 3
+        assert peak_concurrency == 1
+
+    async def test_sync_concurrency_none_allows_all_calls_concurrently(self) -> None:
+        """sync_concurrency=None → all calls fire concurrently (default behaviour)."""
+        import asyncio
+
+        store = AsyncInMemoryStore()
+        peak_concurrency = 0
+        current_concurrency = 0
+
+        async def invoke_tracking(
+            _prompt: str, _response_model: type[MockResponse]
+        ) -> MockResponse:
+            nonlocal peak_concurrency, current_concurrency
+            current_concurrency += 1
+            peak_concurrency = max(peak_concurrency, current_concurrency)
+            await asyncio.sleep(0.01)  # Simulate work — lets event loop interleave
+            current_concurrency -= 1
+            return MockResponse(valid=True, reason="ok")
+
+        provider = Mock()
+        provider.model_name = "test-model"
+        provider.context_window = 4385  # 1 item per batch
+        provider.invoke_structured = AsyncMock(side_effect=invoke_tracking)
+
+        dispatcher = LLMDispatcher(
+            provider=provider, store=store, sync_concurrency=None
+        )
+        request = _create_request(item_count=3, run_id="run-1")
+        request.prompt_builder = _create_unique_prompt_builder()
+
+        results = await dispatcher.dispatch([request])
+
+        assert provider.invoke_structured.call_count == 3
+        assert len(results[0].responses) == 3
+        assert peak_concurrency == 3

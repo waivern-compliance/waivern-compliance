@@ -119,6 +119,7 @@ class LLMDispatcherFactory:
                 provider=provider,
                 store=store,
                 batch_mode=config.batch_mode,
+                sync_concurrency=config.sync_concurrency,
             )
 
         except Exception as e:

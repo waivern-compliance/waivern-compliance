@@ -55,6 +55,7 @@ class LLMDispatcher:
         store: ArtifactStore,
         *,
         batch_mode: bool = False,
+        sync_concurrency: int | None = None,
     ) -> None:
         """Initialise the dispatcher.
 
@@ -62,12 +63,15 @@ class LLMDispatcher:
             provider: LLM provider for structured calls.
             store: Artifact store for caching and batch job persistence.
             batch_mode: Use batch API for async processing.
+            sync_concurrency: Max concurrent LLM calls in sync mode.
+                None means unlimited (all calls fire concurrently).
 
         """
         self._provider = provider
         self._store = store
         self._cache: LLMCache = cast("LLMCache", store)
         self._batch_mode = batch_mode
+        self._sync_concurrency = sync_concurrency
 
     @property
     def request_type(self) -> type[LLMRequest[Any]]:
@@ -253,12 +257,23 @@ class LLMDispatcher:
         request_responses: dict[str, list[dict[str, JsonValue]]],
         request_skipped: dict[str, list[SkippedFinding[Finding]]],
     ) -> None:
-        """Phase B (sync): execute all cache misses concurrently."""
+        """Phase B (sync): execute all cache misses with optional concurrency limit."""
+        semaphore = (
+            asyncio.Semaphore(self._sync_concurrency)
+            if self._sync_concurrency is not None
+            else None
+        )
 
         async def _invoke(miss: _CacheMiss) -> tuple[_CacheMiss, BaseModel]:
-            response = await self._provider.invoke_structured(
-                miss.prompt, miss.response_model
-            )
+            if semaphore is not None:
+                async with semaphore:
+                    response = await self._provider.invoke_structured(
+                        miss.prompt, miss.response_model
+                    )
+            else:
+                response = await self._provider.invoke_structured(
+                    miss.prompt, miss.response_model
+                )
             return miss, response
 
         results = await asyncio.gather(
