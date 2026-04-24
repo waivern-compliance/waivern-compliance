@@ -62,6 +62,11 @@ class LLMServiceConfiguration(BaseServiceConfiguration):
         default=False,
         description="Use batch API for LLM calls (async, lower cost)",
     )
+    sync_concurrency: int | None = Field(
+        default=None,
+        description="Max concurrent LLM calls in sync mode (None = unlimited)",
+        gt=0,
+    )
 
     @field_validator("provider")
     @classmethod
@@ -122,6 +127,7 @@ class LLMServiceConfiguration(BaseServiceConfiguration):
         - OPENAI_MODEL: Model for OpenAI
         - GOOGLE_MODEL: Model for Google
         - WAIVERN_LLM_BATCH_MODE: Enable batch API ("true"/"1"/"yes")
+        - WAIVERN_LLM_SYNC_CONCURRENCY: Max concurrent sync LLM calls (positive int)
 
         Args:
             properties: Configuration properties dictionary
@@ -185,6 +191,14 @@ class LLMServiceConfiguration(BaseServiceConfiguration):
         if "batch_mode" not in config_data:
             batch_env = os.getenv("WAIVERN_LLM_BATCH_MODE", "")
             config_data["batch_mode"] = batch_env.lower() in ("true", "1", "yes")
+
+        # Sync concurrency (positive integer or None)
+        if "sync_concurrency" not in config_data:
+            concurrency_env = os.getenv("WAIVERN_LLM_SYNC_CONCURRENCY", "")
+            try:
+                config_data["sync_concurrency"] = int(concurrency_env)
+            except ValueError:
+                pass  # Leave as None (default)
 
         return cls.model_validate(config_data)
 
