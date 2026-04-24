@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 
+@pytest.mark.slow
 class TestWCTRunsCommand:
     """Tests for 'wct runs' CLI command."""
 

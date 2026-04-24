@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 
+@pytest.mark.slow
 class TestWCTCLIE2E:
     """Test WCT CLI command execution and JSON file output generation."""
 
