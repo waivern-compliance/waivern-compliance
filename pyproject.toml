@@ -82,4 +82,5 @@ addopts = [
 markers = [
     "integration: marks tests as integration tests requiring real API calls (deselect with '-m \"not integration\"')",
     "batch: marks tests that exercise async batch APIs — may take several minutes (deselect with '-m \"not batch\"')",
+    "slow: marks tests that spawn subprocesses or are otherwise slow (deselect with '-m \"not slow\"')",
 ]
