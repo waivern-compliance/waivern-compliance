@@ -14,18 +14,34 @@ GUIDANCE_TEXT = (
 )
 
 
-def _make_builder(guidance_text: str = GUIDANCE_TEXT) -> ISO27001PromptBuilder:
+_DEFAULT_CONTROL = ControlContext(
+    guidance_text=GUIDANCE_TEXT,
+    control_type="preventive",
+    cia=["confidentiality", "integrity"],
+    cybersecurity_concept="protect",
+    operational_capability="system_and_network_protection",
+    iso_security_domain="protection",
+)
+
+
+def _make_builder(
+    guidance_text: str = GUIDANCE_TEXT,
+    sampling_summary: str | None = None,
+) -> ISO27001PromptBuilder:
     """Build a prompt builder with default A.8.24 attributes."""
-    return ISO27001PromptBuilder(
-        ControlContext(
+    control = (
+        _DEFAULT_CONTROL
+        if guidance_text == GUIDANCE_TEXT
+        else ControlContext(
             guidance_text=guidance_text,
-            control_type="preventive",
-            cia=["confidentiality", "integrity"],
-            cybersecurity_concept="protect",
-            operational_capability="system_and_network_protection",
-            iso_security_domain="protection",
+            control_type=_DEFAULT_CONTROL.control_type,
+            cia=_DEFAULT_CONTROL.cia,
+            cybersecurity_concept=_DEFAULT_CONTROL.cybersecurity_concept,
+            operational_capability=_DEFAULT_CONTROL.operational_capability,
+            iso_security_domain=_DEFAULT_CONTROL.iso_security_domain,
         )
     )
+    return ISO27001PromptBuilder(control, sampling_summary=sampling_summary)
 
 
 def _make_evidence(
@@ -138,3 +154,12 @@ class TestPromptContent:
 
         assert "RECOMMENDED ACTIONS" in prompt
         assert "recommended_actions" in prompt
+
+    def test_prompt_includes_sampling_summary_when_provided(self) -> None:
+        """Sampling summary string appears in prompt when builder is configured with one."""
+        summary = "EVIDENCE SAMPLING NOTICE: 5 of 20 items sampled."
+        builder = _make_builder(sampling_summary=summary)
+
+        prompt = builder.build_prompt([_make_group(items=[_make_evidence()])])
+
+        assert summary in prompt

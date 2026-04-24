@@ -29,11 +29,6 @@ from waivern_analysers_shared.llm_validation.protocols import (
     ConcernProvider,
     SourceProvider,
 )
-from waivern_analysers_shared.llm_validation.sampling import (
-    RandomSamplingStrategy,
-    SamplingResult,
-    SamplingStrategy,
-)
 from waivern_analysers_shared.llm_validation.strategy import (
     FilteringValidationStrategy,
     LLMValidationStrategy,
@@ -55,10 +50,6 @@ __all__ = [
     "ConcernGroupingStrategy",
     "GroupingStrategy",
     "SourceGroupingStrategy",
-    # Sampling strategies
-    "RandomSamplingStrategy",
-    "SamplingResult",
-    "SamplingStrategy",
     # Models
     "FALLBACK_ELIGIBLE_SKIP_REASONS",
     "LLMValidationOutcome",

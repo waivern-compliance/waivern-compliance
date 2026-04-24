@@ -31,7 +31,7 @@ Testing rationale:
        - ProcessingPurposeValidationStrategy: tested in test_llm_validation_strategy.py
        - SourceCodeValidationStrategy: tested in test_llm_validation_strategy.py
        - ValidationOrchestrator: tested in waivern-analysers-shared
-       - ConcernGroupingStrategy/RandomSamplingStrategy: tested in waivern-analysers-shared
+       - ConcernGroupingStrategy/ValidationOrchestrator: tested in waivern-analysers-shared
     3. The complete validation flow is verified by integration tests
 
     If you add non-trivial logic (e.g., complex strategy selection, error
@@ -41,7 +41,6 @@ Testing rationale:
 from waivern_analysers_shared.llm_validation import (
     ConcernGroupingStrategy,
     LLMValidationStrategy,
-    RandomSamplingStrategy,
     ValidationOrchestrator,
 )
 from waivern_analysers_shared.types import LLMValidationConfig
@@ -122,16 +121,9 @@ def create_validation_orchestrator(
     concern_provider = ProcessingPurposeConcernProvider()
     grouping_strategy = ConcernGroupingStrategy(concern_provider)
 
-    # Sampling: Runtime configuration (always enabled, defaults to 3)
-    # Only a sample of findings per group is validated by the LLM. This reduces
-    # cost for large datasets while still applying group-level decisions to all.
-    sampling_strategy: RandomSamplingStrategy[ProcessingPurposeIndicatorModel] = (
-        RandomSamplingStrategy(config.sampling_size)
-    )
-
     return ValidationOrchestrator(
         llm_strategy=llm_strategy,
         grouping_strategy=grouping_strategy,
-        sampling_strategy=sampling_strategy,
+        sample_size=config.sampling_size,
         fallback_strategy=fallback_strategy,
     )

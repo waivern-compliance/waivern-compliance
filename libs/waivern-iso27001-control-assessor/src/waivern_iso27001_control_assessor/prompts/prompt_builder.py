@@ -41,14 +41,22 @@ class ISO27001PromptBuilder(PromptBuilder[SecurityEvidenceModel]):
     technical evidence.
     """
 
-    def __init__(self, control: ControlContext) -> None:
+    def __init__(
+        self,
+        control: ControlContext,
+        sampling_summary: str | None = None,
+    ) -> None:
         """Initialise with control context.
 
         Args:
             control: Control guidance text and Annex A attributes.
+            sampling_summary: Optional statistical summary injected into the
+                prompt when evidence has been sampled. Informs the LLM that
+                it is seeing a representative subset.
 
         """
         self._control = control
+        self._sampling_summary = sampling_summary
 
     @override
     def build_prompt(
@@ -73,6 +81,9 @@ class ISO27001PromptBuilder(PromptBuilder[SecurityEvidenceModel]):
             _FRAMEWORK_CONTEXT,
             self._build_control_section(),
         ]
+
+        if self._sampling_summary is not None:
+            sections.append(self._sampling_summary)
 
         if items:
             sections.append(self._build_evidence_section(items))

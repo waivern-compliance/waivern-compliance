@@ -1,11 +1,35 @@
 """Configuration and state types for ISO 27001 control assessor."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from waivern_core import BaseComponentConfiguration
 from waivern_rulesets.iso27001_domains import ISO27001DomainsRule
 from waivern_schemas.iso27001_assessment import EvidenceStatus
 from waivern_schemas.security_document_context import SecurityDocumentContextModel
 from waivern_schemas.security_evidence import SecurityEvidenceModel
+
+
+class EvidenceSamplingConfig(BaseModel):
+    """Configuration for stratified evidence sampling.
+
+    When enabled, reduces evidence sent to the LLM by applying
+    priority-preserving stratified sampling. Negative-polarity items
+    are always included; remaining budget is allocated proportionally
+    across evidence types with round-robin source diversity.
+
+    Disabled by default — all evidence is sent to the LLM.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    enabled: bool = Field(
+        default=False,
+        description="Enable stratified evidence sampling",
+    )
+    max_evidence_items: int = Field(
+        default=20,
+        ge=1,
+        description="Maximum evidence items to send to the LLM per control",
+    )
 
 
 class ISO27001AssessorConfig(BaseComponentConfiguration):
@@ -28,6 +52,10 @@ class ISO27001AssessorConfig(BaseComponentConfiguration):
     control_ref: str = Field(
         min_length=1,
         description="ISO 27001:2022 Annex A control reference (e.g. 'A.5.1')",
+    )
+    evidence_sampling: EvidenceSamplingConfig = Field(
+        default_factory=EvidenceSamplingConfig,
+        description="Stratified evidence sampling configuration",
     )
 
 

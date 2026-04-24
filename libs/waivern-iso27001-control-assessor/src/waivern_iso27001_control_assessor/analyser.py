@@ -28,6 +28,7 @@ from waivern_schemas.security_evidence import SecurityEvidenceModel
 from .prompts.prompt_builder import ControlContext, ISO27001PromptBuilder
 from .prompts.response_model import ISO27001LLMResponse
 from .result_builder import ISO27001ResultBuilder
+from .sampling import build_sampling_summary, stratified_sample
 from .types import ISO27001AssessorConfig, ISO27001PrepareState
 
 logger = logging.getLogger(__name__)
@@ -143,7 +144,13 @@ class ISO27001Assessor(Analyser):
         documents: list[SecurityDocumentContextModel],
         run_id: str,
     ) -> LLMRequest[SecurityEvidenceModel]:
-        """Build an LLMRequest for automated assessment."""
+        """Build an LLMRequest for automated assessment.
+
+        When evidence sampling is enabled, applies stratified sampling to
+        reduce evidence volume while preserving assessment quality. The
+        sampling summary is injected into the prompt so the LLM knows it
+        is seeing a representative subset.
+        """
         doc_content = self._format_document_content(documents)
         control = ControlContext(
             guidance_text=rule.guidance_text,
@@ -154,6 +161,16 @@ class ISO27001Assessor(Analyser):
             iso_security_domain=rule.iso_security_domain,
         )
 
+        sampling_config = self._config.evidence_sampling
+        sampling_summary: str | None = None
+        if sampling_config.enabled:
+            sample_result = stratified_sample(
+                evidence, sampling_config.max_evidence_items
+            )
+            if sample_result.was_sampled:
+                sampling_summary = build_sampling_summary(sample_result)
+                evidence = sample_result.items
+
         return LLMRequest(
             name=f"assessment:{rule.control_ref}",
             groups=[
@@ -163,7 +180,7 @@ class ISO27001Assessor(Analyser):
                     group_id=rule.control_ref,
                 )
             ],
-            prompt_builder=ISO27001PromptBuilder(control),
+            prompt_builder=ISO27001PromptBuilder(control, sampling_summary),
             response_model=ISO27001LLMResponse,
             batching_mode=BatchingMode.INDEPENDENT,
             run_id=run_id,
