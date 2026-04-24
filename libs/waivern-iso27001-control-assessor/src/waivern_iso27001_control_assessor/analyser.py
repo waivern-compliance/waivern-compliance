@@ -168,12 +168,7 @@ class ISO27001Assessor(Analyser):
                 evidence, sampling_config.max_evidence_items
             )
             if sample_result.was_sampled:
-                total_priority = sum(1 for e in evidence if e.polarity == "negative")
-                sampling_summary = build_sampling_summary(
-                    sample_result,
-                    total_evidence=len(evidence),
-                    total_priority=total_priority,
-                )
+                sampling_summary = build_sampling_summary(sample_result)
                 evidence = sample_result.items
 
         return LLMRequest(

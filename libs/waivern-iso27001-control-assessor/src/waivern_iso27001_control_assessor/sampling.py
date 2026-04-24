@@ -24,6 +24,8 @@ class StratifiedSampleResult:
 
     items: list[SecurityEvidenceModel]
     was_sampled: bool
+    total_evidence: int = 0
+    total_priority: int = 0
     strata: list[StratumSummary] = field(default_factory=list)
 
 
@@ -50,25 +52,33 @@ def stratified_sample(
 
     """
     if len(items) <= max_items:
-        return StratifiedSampleResult(items=list(items), was_sampled=False)
+        return StratifiedSampleResult(
+            items=list(items), was_sampled=False, total_evidence=len(items)
+        )
 
     # Step 1-2: Partition and include all priority (negative) items
     priority = [i for i in items if i.polarity == "negative"]
     non_priority = [i for i in items if i.polarity != "negative"]
+    total = len(items)
+    n_priority = len(priority)
 
-    remaining_budget = max_items - len(priority)
+    remaining_budget = max_items - n_priority
 
     # Priority items alone exceed budget — include all negatives anyway
     if remaining_budget <= 0:
         return StratifiedSampleResult(
             items=priority,
             was_sampled=True,
+            total_evidence=total,
+            total_priority=n_priority,
             strata=_build_strata(non_priority, set()),
         )
 
     # Step 3: Early exit if budget covers all remaining
     if len(non_priority) <= remaining_budget:
-        return StratifiedSampleResult(items=list(items), was_sampled=False)
+        return StratifiedSampleResult(
+            items=list(items), was_sampled=False, total_evidence=total
+        )
 
     # Step 4-6: Stratify, allocate, and select
     selected = _select_from_strata(non_priority, remaining_budget)
@@ -78,6 +88,8 @@ def stratified_sample(
     return StratifiedSampleResult(
         items=result_items,
         was_sampled=True,
+        total_evidence=total,
+        total_priority=n_priority,
         strata=_build_strata(non_priority, selected_ids),
     )
 
@@ -102,11 +114,19 @@ def _select_from_strata(
         allocations[key] = share
         allocated += share
 
-    # Adjust for rounding — trim from largest stratum if over budget
+    # Adjust for rounding — trim from largest or fill from largest with remaining capacity
     while allocated > budget:
         largest = max(sorted_keys, key=lambda k: allocations[k])
         allocations[largest] -= 1
         allocated -= 1
+    while allocated < budget:
+        # Give spare slots to strata that still have unsampled items
+        candidates = [k for k in sorted_keys if allocations[k] < len(strata[k])]
+        if not candidates:
+            break
+        largest = max(candidates, key=lambda k: len(strata[k]) - allocations[k])
+        allocations[largest] += 1
+        allocated += 1
 
     # Round-robin selection within each stratum
     selected: list[SecurityEvidenceModel] = []
@@ -165,20 +185,14 @@ def _build_strata(
     ]
 
 
-def build_sampling_summary(
-    result: StratifiedSampleResult,
-    total_evidence: int,
-    total_priority: int,
-) -> str:
+def build_sampling_summary(result: StratifiedSampleResult) -> str:
     """Build a statistical summary section for the LLM prompt.
 
     Informs the LLM that it is seeing a representative subset, not the
     full evidence set, with per-stratum breakdown.
 
     Args:
-        result: The sampling result containing strata metadata.
-        total_evidence: Total evidence items before sampling.
-        total_priority: Number of priority (negative) items included unconditionally.
+        result: The sampling result containing strata and totals metadata.
 
     Returns:
         Formatted summary string for prompt injection.
@@ -187,12 +201,12 @@ def build_sampling_summary(
     lines = [
         "**EVIDENCE SAMPLING NOTICE:**",
         f"You are reviewing a representative sample of {len(result.items)} "
-        f"out of {total_evidence} total evidence items.",
+        f"out of {result.total_evidence} total evidence items.",
     ]
 
-    if total_priority > 0:
+    if result.total_priority > 0:
         lines.append(
-            f"All {total_priority} negative-polarity items are included "
+            f"All {result.total_priority} negative-polarity items are included "
             f"unconditionally (never sampled away)."
         )
 

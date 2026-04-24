@@ -1,6 +1,6 @@
 """Configuration and state types for ISO 27001 control assessor."""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from waivern_core import BaseComponentConfiguration
 from waivern_rulesets.iso27001_domains import ISO27001DomainsRule
 from waivern_schemas.iso27001_assessment import EvidenceStatus
@@ -19,7 +19,7 @@ class EvidenceSamplingConfig(BaseModel):
     Disabled by default — all evidence is sent to the LLM.
     """
 
-    model_config = {"frozen": True}
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
     enabled: bool = Field(
         default=False,

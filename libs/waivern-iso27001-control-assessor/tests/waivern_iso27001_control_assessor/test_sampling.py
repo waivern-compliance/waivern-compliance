@@ -82,6 +82,22 @@ class TestStratifiedSample:
         assert neg_ids.issubset(result_ids)
         assert len(result.items) == 5  # Only negatives, no budget for positives
 
+    def test_budget_fully_allocated_across_equal_strata(self) -> None:
+        """Rounding must not leave budget unspent when strata have equal sizes."""
+        # 3 CODE + 3 CONFIG + 3 DOCUMENT, budget 4
+        # Each stratum's proportional share rounds to 1 (3/9*4 = 1.33 → 1),
+        # totalling 3 — the spare slot must be distributed, not lost.
+        items = [
+            *[_item(evidence_type="CODE", source=f"c{i}.py") for i in range(3)],
+            *[_item(evidence_type="CONFIG", source=f"cfg{i}.yaml") for i in range(3)],
+            *[_item(evidence_type="DOCUMENT", source=f"doc{i}.md") for i in range(3)],
+        ]
+
+        result = stratified_sample(items, max_items=4)
+
+        assert result.was_sampled is True
+        assert len(result.items) == 4
+
     def test_round_robin_source_diversity(self) -> None:
         """Within a stratum, items selected via round-robin across sources."""
         # 3 items from source A, 3 from source B — budget 3 should pick from both
@@ -113,7 +129,7 @@ class TestBuildSamplingSummary:
         ]
 
         result = stratified_sample([*code_items, *config_items], max_items=5)
-        summary = build_sampling_summary(result, total_evidence=10, total_priority=0)
+        summary = build_sampling_summary(result)
 
         assert "CODE" in summary
         assert "CONFIG" in summary
