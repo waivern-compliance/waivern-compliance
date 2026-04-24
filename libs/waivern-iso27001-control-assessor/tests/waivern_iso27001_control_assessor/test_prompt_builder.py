@@ -138,3 +138,16 @@ class TestPromptContent:
 
         assert "RECOMMENDED ACTIONS" in prompt
         assert "recommended_actions" in prompt
+
+    def test_prompt_includes_sampling_summary_when_provided(self) -> None:
+        """Sampling summary string appears in prompt when builder is configured with one."""
+        summary = "EVIDENCE SAMPLING NOTICE: 5 of 20 items sampled."
+        builder = _make_builder()
+        builder = ISO27001PromptBuilder(
+            builder._control,
+            sampling_summary=summary,
+        )
+
+        prompt = builder.build_prompt([_make_group(items=[_make_evidence()])])
+
+        assert summary in prompt
