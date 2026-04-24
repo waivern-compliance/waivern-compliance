@@ -80,8 +80,9 @@ artifacts:
 ## Development Commands
 
 ```bash
-# Quality checks (ALWAYS run before completing tasks)
-./scripts/dev-checks.sh             # All checks + tests
+# Quality checks
+./scripts/dev-checks-lite.sh        # Fast checks (use during development)
+./scripts/dev-checks.sh             # Full checks (use before committing)
 
 # Individual checks
 ./scripts/lint.sh && ./scripts/format.sh && ./scripts/type-check.sh
@@ -168,12 +169,11 @@ def process(self, inputs: list[Message], output_schema: Schema) -> Message: ...
 
 ## Task Completion
 
-**CRITICAL: Run `./scripts/dev-checks.sh` before marking ANY task completed.**
-
 1. Mark task `in_progress`
 2. Make changes
-3. Run `./scripts/dev-checks.sh`
-4. Only after checks pass → mark `completed`
+3. Run `./scripts/dev-checks-lite.sh` during development (after each RED-GREEN-REFACTOR cycle)
+4. Run `./scripts/dev-checks.sh` (full checks) before committing
+5. Only after full checks pass → mark `completed`
 
 ## DO NOT
 
@@ -190,7 +190,7 @@ def process(self, inputs: list[Message], output_schema: Schema) -> Message: ...
 - Remove unnecessary code after refactoring
 - Break large classes/functions into smaller ones
 - Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`
-- Run dev-checks before each task completion
+- Run dev-checks-lite during development, full dev-checks before committing
 
 ## Git Requirements
 
