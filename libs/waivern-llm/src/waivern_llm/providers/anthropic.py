@@ -52,6 +52,7 @@ class AnthropicProvider:
         self,
         api_key: str | None = None,
         model: str | None = None,
+        max_retries: int = 2,
     ) -> None:
         """Initialise the Anthropic provider.
 
@@ -59,6 +60,7 @@ class AnthropicProvider:
             api_key: Anthropic API key. Falls back to ANTHROPIC_API_KEY env var.
             model: Model name. Falls back to ANTHROPIC_MODEL env var,
                    then defaults to claude-sonnet-4-5.
+            max_retries: Max retries for transient API failures.
 
         Raises:
             LLMConfigurationError: If API key is not provided or found in environment.
@@ -66,6 +68,7 @@ class AnthropicProvider:
         """
         self._model = model or os.getenv("ANTHROPIC_MODEL") or "claude-sonnet-4-5"
         self._api_key = api_key or os.getenv("ANTHROPIC_API_KEY")
+        self._max_retries = max_retries
 
         if not self._api_key:
             raise LLMConfigurationError(
@@ -80,6 +83,7 @@ class AnthropicProvider:
             temperature=0,  # Consistent responses for compliance analysis
             max_tokens_to_sample=self._capabilities.max_output_tokens,
             timeout=300,
+            max_retries=self._max_retries,
             stop=None,
         )
 
@@ -138,7 +142,9 @@ class AnthropicProvider:
         sync path is used.
         """
         if self._async_client is None:
-            self._async_client = AsyncAnthropic(api_key=self._api_key)
+            self._async_client = AsyncAnthropic(
+                api_key=self._api_key, max_retries=self._max_retries
+            )
         return self._async_client
 
     async def submit_batch(self, requests: list[BatchRequest]) -> BatchSubmission:

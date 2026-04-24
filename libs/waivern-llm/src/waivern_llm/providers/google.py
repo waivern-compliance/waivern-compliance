@@ -9,6 +9,7 @@ import logging
 import os
 
 from google import genai
+from google.genai.types import HttpOptions, HttpRetryOptions
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel
 
@@ -40,6 +41,7 @@ class GoogleProvider:
         self,
         api_key: str | None = None,
         model: str | None = None,
+        max_retries: int = 2,
     ) -> None:
         """Initialise the Google provider.
 
@@ -47,6 +49,7 @@ class GoogleProvider:
             api_key: Google API key. Falls back to GOOGLE_API_KEY env var.
             model: Model name. Falls back to GOOGLE_MODEL env var,
                    then defaults to gemini-2.5-flash.
+            max_retries: Max retries for transient API failures.
 
         Raises:
             LLMConfigurationError: If API key is not provided or found in environment.
@@ -54,6 +57,7 @@ class GoogleProvider:
         """
         self._model = model or os.getenv("GOOGLE_MODEL") or "gemini-2.5-flash"
         self._api_key = api_key or os.getenv("GOOGLE_API_KEY")
+        self._max_retries = max_retries
 
         if not self._api_key:
             raise LLMConfigurationError(
@@ -68,6 +72,7 @@ class GoogleProvider:
             temperature=0,
             max_output_tokens=self._capabilities.max_output_tokens,
             timeout=300,
+            max_retries=self._max_retries,
         )
 
         logger.info(f"Initialised Google provider with model: {self._model}")
@@ -123,7 +128,12 @@ class GoogleProvider:
         only the sync path is used.
         """
         if self._genai_client is None:
-            self._genai_client = genai.Client(api_key=self._api_key)
+            self._genai_client = genai.Client(
+                api_key=self._api_key,
+                http_options=HttpOptions(
+                    retry_options=HttpRetryOptions(attempts=self._max_retries),
+                ),
+            )
         return self._genai_client
 
     async def submit_batch(self, requests: list[BatchRequest]) -> BatchSubmission:

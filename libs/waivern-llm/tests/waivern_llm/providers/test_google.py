@@ -4,6 +4,8 @@ Business behaviour: Provides async LLM calls using Google's Gemini models
 via LangChain, satisfying the LLMProvider protocol.
 """
 
+from unittest.mock import patch
+
 import pytest
 from pydantic import BaseModel
 
@@ -75,6 +77,15 @@ class TestGoogleProviderInitialisation:
             GoogleProvider()
 
         assert "GOOGLE_API_KEY" in str(exc_info.value)
+
+    def test_max_retries_forwarded_to_langchain_client(self) -> None:
+        """max_retries is passed to ChatGoogleGenerativeAI at construction."""
+        with patch(
+            "waivern_llm.providers.google.ChatGoogleGenerativeAI"
+        ) as mock_chat_cls:
+            GoogleProvider(api_key="test-key", max_retries=5)
+
+            assert mock_chat_cls.call_args.kwargs["max_retries"] == 5
 
 
 # =============================================================================

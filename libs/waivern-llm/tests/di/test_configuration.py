@@ -442,3 +442,60 @@ class TestSyncConcurrencyConfiguration:
             config = LLMServiceConfiguration.from_properties({})
 
             assert config.sync_concurrency is None
+
+
+class TestMaxRetriesConfiguration:
+    """Tests for max_retries configuration field."""
+
+    def test_max_retries_defaults_to_two(self) -> None:
+        """max_retries should default to 2 when not specified."""
+        config = LLMServiceConfiguration(provider="anthropic", api_key="test-key")
+
+        assert config.max_retries == 2
+
+    def test_max_retries_can_be_set_explicitly(self) -> None:
+        """Explicit max_retries value should be preserved."""
+        config = LLMServiceConfiguration(
+            provider="anthropic", api_key="test-key", max_retries=5
+        )
+
+        assert config.max_retries == 5
+
+    def test_max_retries_validation_rejects_negative_values(self) -> None:
+        """max_retries below 0 should raise ValidationError."""
+        import pytest
+
+        with pytest.raises(ValidationError):
+            LLMServiceConfiguration(
+                provider="anthropic", api_key="test-key", max_retries=-1
+            )
+
+    def test_from_properties_reads_max_retries_from_environment(self) -> None:
+        """WAIVERN_LLM_MAX_RETRIES env var should be parsed as integer."""
+        with patch.dict(
+            os.environ,
+            {
+                "LLM_PROVIDER": "anthropic",
+                "ANTHROPIC_API_KEY": "test-key",
+                "WAIVERN_LLM_MAX_RETRIES": "5",
+            },
+            clear=True,
+        ):
+            config = LLMServiceConfiguration.from_properties({})
+
+            assert config.max_retries == 5
+
+    def test_from_properties_ignores_non_numeric_max_retries_env_var(self) -> None:
+        """Non-numeric WAIVERN_LLM_MAX_RETRIES should fall back to default."""
+        with patch.dict(
+            os.environ,
+            {
+                "LLM_PROVIDER": "anthropic",
+                "ANTHROPIC_API_KEY": "test-key",
+                "WAIVERN_LLM_MAX_RETRIES": "abc",
+            },
+            clear=True,
+        ):
+            config = LLMServiceConfiguration.from_properties({})
+
+            assert config.max_retries == 2

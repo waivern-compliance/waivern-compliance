@@ -38,13 +38,24 @@ def create_provider(config: LLMServiceConfiguration) -> LLMProvider:
     """
     match config.provider:
         case "anthropic":
-            return AnthropicProvider(api_key=config.api_key, model=config.model)
+            return AnthropicProvider(
+                api_key=config.api_key,
+                model=config.model,
+                max_retries=config.max_retries,
+            )
         case "openai":
             return OpenAIProvider(
-                api_key=config.api_key, model=config.model, base_url=config.base_url
+                api_key=config.api_key,
+                model=config.model,
+                base_url=config.base_url,
+                max_retries=config.max_retries,
             )
         case "google":
-            return GoogleProvider(api_key=config.api_key, model=config.model)
+            return GoogleProvider(
+                api_key=config.api_key,
+                model=config.model,
+                max_retries=config.max_retries,
+            )
         case _:
             # LLMServiceConfiguration validates provider, so this is unreachable
             msg = f"Unsupported provider: {config.provider}"

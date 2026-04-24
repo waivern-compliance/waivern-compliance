@@ -43,6 +43,7 @@ class OpenAIProvider:
         api_key: str | None = None,
         model: str | None = None,
         base_url: str | None = None,
+        max_retries: int = 2,
     ) -> None:
         """Initialise the OpenAI provider.
 
@@ -53,6 +54,7 @@ class OpenAIProvider:
                    then defaults to gpt-4o.
             base_url: Base URL for OpenAI-compatible APIs. Falls back to
                       OPENAI_BASE_URL env var.
+            max_retries: Max retries for transient API failures.
 
         Raises:
             LLMConfigurationError: If API key is not provided and base_url is not set.
@@ -61,6 +63,7 @@ class OpenAIProvider:
         self._model = model or os.getenv("OPENAI_MODEL") or "gpt-4o"
         self._base_url = base_url or os.getenv("OPENAI_BASE_URL")
         self._api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self._max_retries = max_retries
 
         if not self._api_key and not self._base_url:
             raise LLMConfigurationError(
@@ -81,6 +84,7 @@ class OpenAIProvider:
             temperature=self._capabilities.temperature,
             max_tokens=self._capabilities.max_output_tokens,  # type: ignore[reportCallIssue]
             timeout=300,
+            max_retries=self._max_retries,
         )
 
         logger.info(f"Initialised OpenAI provider with model: {self._model}")
@@ -140,6 +144,7 @@ class OpenAIProvider:
             self._async_client = AsyncOpenAI(
                 api_key=effective_api_key,
                 base_url=self._base_url,
+                max_retries=self._max_retries,
             )
         return self._async_client
 
