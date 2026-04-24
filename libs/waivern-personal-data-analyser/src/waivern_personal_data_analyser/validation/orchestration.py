@@ -8,7 +8,6 @@ propagate to non-sampled findings.
 
 from waivern_analysers_shared.llm_validation import (
     ConcernGroupingStrategy,
-    RandomSamplingStrategy,
     ValidationOrchestrator,
 )
 from waivern_analysers_shared.types import LLMValidationConfig
@@ -36,7 +35,5 @@ def create_validation_orchestrator(
     return ValidationOrchestrator(
         llm_strategy=PersonalDataValidationStrategy(),
         grouping_strategy=ConcernGroupingStrategy(PersonalDataConcernProvider()),
-        sampling_strategy=RandomSamplingStrategy[PersonalDataIndicatorModel](
-            config.sampling_size
-        ),
+        sample_size=config.sampling_size,
     )

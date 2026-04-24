@@ -12,9 +12,9 @@ Architecture
     ┌────────────────────────────────────────────────────────────────┐
     │                  ValidationOrchestrator                        │
     │                                                                │
-    │  Composes orthogonal strategies:                               │
+    │  Composes orthogonal concerns:                                 │
     │  • GroupingStrategy: How to organise findings (optional)       │
-    │  • SamplingStrategy: How to sample from groups (optional)      │
+    │  • sample_size: How many findings to sample per group          │
     │  • LLMValidationStrategy: How to validate findings via LLM     │
     └────────────────────────────────────────────────────────────────┘
 
@@ -27,6 +27,7 @@ handles batching and LLM calls.
 
 """
 
+import random
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -46,7 +47,6 @@ from waivern_analysers_shared.llm_validation.models import (
     SkippedFinding,
     ValidationResult,
 )
-from waivern_analysers_shared.llm_validation.sampling import SamplingStrategy
 from waivern_analysers_shared.llm_validation.strategy import LLMValidationStrategy
 from waivern_analysers_shared.types import LLMValidationConfig
 
@@ -121,9 +121,9 @@ class FallbackNeeded[T: Finding]:
 class ValidationOrchestrator[T: Finding]:
     """Orchestrates the complete validation flow for filtering strategies.
 
-    Composes orthogonal strategies:
+    Composes orthogonal concerns:
     - GroupingStrategy: How to organise findings (optional)
-    - SamplingStrategy: How to sample from groups (optional, requires grouping)
+    - sample_size: How many findings to sample per group (optional, requires grouping)
     - LLMValidationStrategy: How to batch and call the LLM
 
     Note: This orchestrator is specific to the **filtering** paradigm where
@@ -144,7 +144,7 @@ class ValidationOrchestrator[T: Finding]:
         self,
         llm_strategy: LLMValidationStrategy[T, LLMValidationOutcome[T]],
         grouping_strategy: GroupingStrategy[T] | None = None,
-        sampling_strategy: SamplingStrategy[T] | None = None,
+        sample_size: int | None = None,
         fallback_strategy: LLMValidationStrategy[T, LLMValidationOutcome[T]]
         | None = None,
     ) -> None:
@@ -153,24 +153,23 @@ class ValidationOrchestrator[T: Finding]:
         Args:
             llm_strategy: Primary strategy for LLM validation.
             grouping_strategy: Optional strategy for grouping findings.
-            sampling_strategy: Optional strategy for sampling (requires grouping).
+            sample_size: Max findings to sample per group (requires grouping).
+                When None, all grouped findings are validated.
             fallback_strategy: Optional fallback for findings skipped by primary.
                 Used when primary strategy cannot validate certain findings (e.g.,
                 oversized sources, missing content). Only findings skipped for
                 specific reasons are eligible for fallback validation.
 
         Raises:
-            ValueError: If sampling_strategy provided without grouping_strategy.
+            ValueError: If sample_size provided without grouping_strategy.
 
         """
-        if sampling_strategy is not None and grouping_strategy is None:
-            raise ValueError(
-                "sampling_strategy requires grouping_strategy to be provided"
-            )
+        if sample_size is not None and grouping_strategy is None:
+            raise ValueError("sample_size requires grouping_strategy to be provided")
 
         self._llm_strategy = llm_strategy
         self._grouping_strategy = grouping_strategy
-        self._sampling_strategy = sampling_strategy
+        self._sample_size = sample_size
         self._fallback_strategy = fallback_strategy
 
     def prepare(
@@ -222,10 +221,8 @@ class ValidationOrchestrator[T: Finding]:
 
         groups = self._grouping_strategy.group(findings)
 
-        if self._sampling_strategy is not None:
-            sampling_result = self._sampling_strategy.sample(groups)
-            sampled = sampling_result.sampled
-            non_sampled = sampling_result.non_sampled
+        if self._sample_size is not None:
+            sampled, non_sampled = self._sample_groups(groups, self._sample_size)
         else:
             sampled = groups
             non_sampled: dict[str, list[T]] = {key: [] for key in groups}
@@ -510,3 +507,29 @@ class ValidationOrchestrator[T: Finding]:
             all_succeeded=outcome.validation_succeeded,
             skipped_samples=outcome.skipped,
         )
+
+    @staticmethod
+    def _sample_groups(
+        groups: dict[str, list[T]],
+        sample_size: int,
+    ) -> tuple[dict[str, list[T]], dict[str, list[T]]]:
+        """Randomly sample up to ``sample_size`` findings per group.
+
+        Returns:
+            Tuple of (sampled, non_sampled) dicts keyed by group.
+
+        """
+        sampled: dict[str, list[T]] = {}
+        non_sampled: dict[str, list[T]] = {}
+
+        for group_key, findings in groups.items():
+            if len(findings) <= sample_size:
+                sampled[group_key] = list(findings)
+                non_sampled[group_key] = []
+            else:
+                samples = random.sample(findings, sample_size)
+                sampled[group_key] = samples
+                sample_ids = {f.id for f in samples}
+                non_sampled[group_key] = [f for f in findings if f.id not in sample_ids]
+
+        return sampled, non_sampled

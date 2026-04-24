@@ -8,6 +8,7 @@ group-level decisions. Fallback is handled via multi-round dispatch.
 
 from unittest.mock import Mock
 
+import pytest
 from waivern_core.schemas.finding_types import (
     BaseFindingEvidence,
     BaseFindingMetadata,
@@ -21,7 +22,6 @@ from waivern_analysers_shared.llm_validation.models import (
     LLMValidationOutcome,
     ValidationResult,
 )
-from waivern_analysers_shared.llm_validation.sampling import SamplingResult
 from waivern_analysers_shared.llm_validation.validation_orchestrator import (
     FallbackNeeded,
     OrchestratorPrepareState,
@@ -62,21 +62,6 @@ class _GroupingByAttr:
         for finding in findings:
             groups.setdefault(finding.group, []).append(finding)
         return groups
-
-
-class _FixedSampling:
-    """Sampling strategy returning preconfigured sampled/non_sampled."""
-
-    def __init__(
-        self,
-        sampled: dict[str, list[_Finding]],
-        non_sampled: dict[str, list[_Finding]],
-    ) -> None:
-        self._sampled = sampled
-        self._non_sampled = non_sampled
-
-    def sample(self, groups: dict[str, list[_Finding]]) -> SamplingResult[_Finding]:
-        return SamplingResult(sampled=self._sampled, non_sampled=self._non_sampled)
 
 
 _TEST_RUN_ID = "test-run-id"
@@ -163,7 +148,9 @@ class TestOrchestratorPrepare:
         assert state.strategy_findings == findings
         assert state.groups is None
 
-    def test_prepare_with_grouping_and_sampling(self) -> None:
+    def test_prepare_with_grouping_and_sampling(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Groups -> samples -> flattens -> passes samples to strategy."""
         a1 = _make_finding("a1", "GroupA")
         a2 = _make_finding("a2", "GroupA")
@@ -172,15 +159,14 @@ class TestOrchestratorPrepare:
         findings = [a1, a2, b1, b2]
         sentinel_request = Mock(spec=LLMRequest)
         strategy = _make_prepare_mock(request=sentinel_request)
-        sampling = _FixedSampling(
-            sampled={"GroupA": [a1], "GroupB": [b1]},
-            non_sampled={"GroupA": [a2], "GroupB": [b2]},
-        )
+
+        # Control randomness: always pick first item from each group
+        monkeypatch.setattr("random.sample", lambda items, k: items[:k])
 
         orchestrator = ValidationOrchestrator(
             llm_strategy=strategy,
             grouping_strategy=_GroupingByAttr(),
-            sampling_strategy=sampling,
+            sample_size=1,
         )
 
         state, request = orchestrator.prepare(findings, _make_config(), _TEST_RUN_ID)
@@ -191,22 +177,23 @@ class TestOrchestratorPrepare:
         assert sorted(f.id for f in passed_findings) == ["a1", "b1"]
         assert state.strategy_findings == passed_findings
 
-    def test_prepare_state_captures_groups_and_samples(self) -> None:
+    def test_prepare_state_captures_groups_and_samples(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """OrchestratorPrepareState has correct groups/sampled/non_sampled."""
         a1 = _make_finding("a1", "GroupA")
         a2 = _make_finding("a2", "GroupA")
         b1 = _make_finding("b1", "GroupB")
         findings = [a1, a2, b1]
         strategy = _make_prepare_mock(request=Mock(spec=LLMRequest))
-        sampling = _FixedSampling(
-            sampled={"GroupA": [a1], "GroupB": [b1]},
-            non_sampled={"GroupA": [a2], "GroupB": []},
-        )
+
+        # Control randomness: always pick first item from each group
+        monkeypatch.setattr("random.sample", lambda items, k: items[:k])
 
         orchestrator = ValidationOrchestrator(
             llm_strategy=strategy,
             grouping_strategy=_GroupingByAttr(),
-            sampling_strategy=sampling,
+            sample_size=1,
         )
 
         state, _ = orchestrator.prepare(findings, _make_config(), _TEST_RUN_ID)
@@ -254,6 +241,16 @@ class TestOrchestratorPrepare:
         restored = OrchestratorPrepareState[_Finding].model_validate(raw)
 
         assert restored.strategy_state == original.strategy_state
+
+    def test_sample_size_without_grouping_raises(self) -> None:
+        """sample_size without grouping_strategy should raise ValueError."""
+        strategy = _make_prepare_mock(request=Mock(spec=LLMRequest))
+
+        with pytest.raises(ValueError, match="sample_size requires grouping_strategy"):
+            ValidationOrchestrator(
+                llm_strategy=strategy,
+                sample_size=3,
+            )
 
 
 class TestOrchestratorFinalise:
