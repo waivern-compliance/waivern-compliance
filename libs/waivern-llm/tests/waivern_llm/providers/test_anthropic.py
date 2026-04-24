@@ -4,7 +4,7 @@ Business behaviour: Provides async LLM calls using Anthropic's Claude models
 via LangChain, satisfying the LLMProvider protocol.
 """
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from pydantic import BaseModel
@@ -77,6 +77,13 @@ class TestAnthropicProviderInitialisation:
             AnthropicProvider()
 
         assert "ANTHROPIC_API_KEY" in str(exc_info.value)
+
+    def test_max_retries_forwarded_to_langchain_client(self) -> None:
+        """max_retries is passed to ChatAnthropic at construction."""
+        with patch("waivern_llm.providers.anthropic.ChatAnthropic") as mock_chat_cls:
+            AnthropicProvider(api_key="test-key", max_retries=5)
+
+            assert mock_chat_cls.call_args.kwargs["max_retries"] == 5
 
 
 # =============================================================================

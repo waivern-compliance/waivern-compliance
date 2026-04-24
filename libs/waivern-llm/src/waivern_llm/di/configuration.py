@@ -67,6 +67,11 @@ class LLMServiceConfiguration(BaseServiceConfiguration):
         description="Max concurrent LLM calls in sync mode (None = unlimited)",
         gt=0,
     )
+    max_retries: int = Field(
+        default=2,
+        description="Max retries for transient LLM API failures",
+        ge=0,
+    )
 
     @field_validator("provider")
     @classmethod
@@ -128,6 +133,7 @@ class LLMServiceConfiguration(BaseServiceConfiguration):
         - GOOGLE_MODEL: Model for Google
         - WAIVERN_LLM_BATCH_MODE: Enable batch API ("true"/"1"/"yes")
         - WAIVERN_LLM_SYNC_CONCURRENCY: Max concurrent sync LLM calls (positive int)
+        - WAIVERN_LLM_MAX_RETRIES: Max retries for transient API failures (non-negative int, default 2)
 
         Args:
             properties: Configuration properties dictionary
@@ -199,6 +205,14 @@ class LLMServiceConfiguration(BaseServiceConfiguration):
                 config_data["sync_concurrency"] = int(concurrency_env)
             except ValueError:
                 pass  # Leave as None (default)
+
+        # Max retries (non-negative integer, default 2)
+        if "max_retries" not in config_data:
+            retries_env = os.getenv("WAIVERN_LLM_MAX_RETRIES", "")
+            try:
+                config_data["max_retries"] = int(retries_env)
+            except ValueError:
+                pass  # Leave as default (2)
 
         return cls.model_validate(config_data)
 

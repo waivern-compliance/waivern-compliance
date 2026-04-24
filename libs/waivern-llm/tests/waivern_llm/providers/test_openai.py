@@ -4,6 +4,8 @@ Business behaviour: Provides async LLM calls using OpenAI's models
 via LangChain, satisfying the LLMProvider protocol.
 """
 
+from unittest.mock import patch
+
 import pytest
 from pydantic import BaseModel
 from waivern_core import JsonValue
@@ -87,6 +89,13 @@ class TestOpenAIProviderInitialisation:
         provider = OpenAIProvider(base_url="http://localhost:8000")
 
         assert provider.model_name == "gpt-4o"
+
+    def test_max_retries_forwarded_to_langchain_client(self) -> None:
+        """max_retries is passed to ChatOpenAI at construction."""
+        with patch("waivern_llm.providers.openai.ChatOpenAI") as mock_chat_cls:
+            OpenAIProvider(api_key="test-key", max_retries=5)
+
+            assert mock_chat_cls.call_args.kwargs["max_retries"] == 5
 
 
 # =============================================================================
