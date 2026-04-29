@@ -101,7 +101,6 @@ uv run wct poll <run-id>            # Poll batch job status
 uv run wct connectors               # List connectors
 uv run wct processors               # List processors
 uv run wct validate-runbook <file>  # Validate runbook
-uv run wct test-llm                 # Test LLM config
 ```
 
 ## UV Monorepo Workspace
@@ -167,21 +166,52 @@ def process(self, inputs: list[Message], output_schema: Schema) -> Message: ...
 - **British English** spelling
 - **Python 3.12+:** Use PEP 695 generics (`def func[T](...)`), pattern matching where appropriate
 
+## Documentation Style
+
+For complex orchestration functions, document the high-level steps as a numbered list in the docstring. This makes the function's flow clear at a glance. Example:
+
+```python
+def validate_findings_with_file_content(...) -> ...:
+    """Validate findings using file-based batching.
+
+    Orchestrates the complete validation flow:
+    1. Group findings by source file
+    2. Create token-aware batches
+    3. For each batch, generate prompt with full file content and call LLM
+    4. Parse responses and filter findings
+
+    Args:
+        ...
+    """
+```
+
+Use this pattern sparingly — only for functions that orchestrate multiple steps or have complex control flow. Don't use it for simple functions.
+
+## Follow Established Patterns
+
+**Consistency is critical.** Before writing any code:
+
+1. **Read existing similar code** — Find similar implementations in the codebase and follow the same patterns
+2. **Match the style** — Use the same structure, naming conventions, docstring format, test patterns
+3. **Don't invent new patterns** — If there's an established way to do something, use it
+4. **Check test patterns** — Look at how existing tests are written (e.g., use `monkeypatch` for env vars, not `patch.dict`)
+
+If you believe an existing pattern is suboptimal, raise it with the user BEFORE implementing something different.
+
 ## Task Completion
 
 1. Mark task `in_progress`
 2. Make changes
 3. Run `./scripts/dev-checks-lite.sh` during development (after each RED-GREEN-REFACTOR cycle)
-4. Run `./scripts/dev-checks.sh` (full checks) before committing
+4. Run `./scripts/dev-checks.sh` (full checks) before committing — fix failures one by one; don't suppress, skip, or bypass
 5. Only after full checks pass → mark `completed`
+
+**Skip dev-checks** when changes are markdown, comments, or docstrings only — these don't affect runtime behaviour.
 
 ## DO NOT
 
-- Commit directly to `main`/`master` - use feature branches
 - Create backwards compatibility layers unless asked
 - Preserve old context in comments during refactoring
-- Bypass quality checks
-- Mark tasks completed without running dev-checks
 - **Add `__init__.py` to test directories** - causes type checker to resolve test package instead of source package
 
 ## DO
@@ -190,7 +220,6 @@ def process(self, inputs: list[Message], output_schema: Schema) -> Message: ...
 - Remove unnecessary code after refactoring
 - Break large classes/functions into smaller ones
 - Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`
-- Run dev-checks-lite during development, full dev-checks before committing
 
 ## Git Requirements
 
