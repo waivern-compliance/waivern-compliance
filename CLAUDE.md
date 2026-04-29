@@ -246,6 +246,17 @@ uv run wct test-llm
 **Note:** The `.env` file lives at the workspace root (same level as `pyproject.toml`).
 All commands (`uv run wct`, `uv run pytest`, etc.) should be run from the workspace root.
 
+## Git Hooks
+
+Pre-commit manages all git hooks for this repo. After cloning, run:
+
+```bash
+uv run pre-commit install
+uv run pre-commit install --hook-type post-checkout
+```
+
+The post-checkout hook (`scripts/post-checkout-setup-worktree.sh`) symlinks gitignored local files (`.env`, `.local/`, `.claude/settings.local.json`) and the per-project Claude memory directory from the main worktree into newly-created worktrees. Symlinking (rather than copying) means edits propagate both ways and survive `git worktree remove`.
+
 ## Adding New Packages
 
 1. Create directory in `libs/` or `apps/` with `pyproject.toml`
