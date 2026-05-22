@@ -265,9 +265,22 @@ The post-checkout hook (`scripts/post-checkout-setup-worktree.sh`) symlinks giti
 4. Run `uv sync`
 5. Run `chmod +x libs/<package>/scripts/*.sh` — the `Write` tool creates files without execute permission, so `dev-checks.sh` will fail with "Permission denied" without this step
 
+## Singleton Test Isolation
+
+Singleton registries (`SchemaRegistry`, `RulesetRegistry`, `ExporterRegistry`, `LanguageRegistry`, etc.) hold mutable global state that bleeds across tests. The workspace pattern:
+
+1. **Singleton implements** `snapshot_state()` and `restore_state(snapshot)` classmethods
+2. **Workspace `conftest.py`** declares an `autouse=True` fixture per registry that snapshots before, restores after
+3. **Tests get isolation automatically** — no per-test setup
+
+When adding a new singleton registry, follow the same pattern: add the two classmethods, then a matching `isolate_<name>_registry` autouse fixture in `conftest.py`. Use `.copy()` / `deepcopy()` in snapshots to avoid reference sharing.
+
 ## Resources
 
 - [WCF Core Concepts](docs/core-concepts/wcf-core-components.md)
+- [Regulatory Framework Architecture](docs/core-concepts/regulatory-framework-architecture.md)
 - [Configuration Guide](docs/how-tos/configuration.md)
+- [Extending WCF](docs/how-tos/extending-wcf.md)
 - [Runbook Documentation](apps/wct/runbooks/README.md)
 - [Child Runbook Composition](libs/waivern-orchestration/docs/child-runbook-composition.md)
+- [Architecture Decision Records](docs/adr/)

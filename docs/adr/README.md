@@ -23,10 +23,7 @@ We use Michael Nygard's template, which includes:
 
 ## ADR Numbering
 
-ADRs are numbered sequentially with a 4-digit prefix:
-- `0001-first-decision.md`
-- `0002-second-decision.md`
-- etc.
+ADRs are numbered sequentially with a 4-digit prefix (e.g., `0002-dependency-injection-for-service-management.md`).
 
 ## When to Create an ADR
 

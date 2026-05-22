@@ -98,4 +98,4 @@ runbook = Runbook(
 
 - [Runbook Format](docs/runbook-format.md) - Artifact-centric runbook structure and syntax
 - [Child Runbook Composition](docs/child-runbook-composition.md) - Guide to modular runbook design
-- [Execution Persistence](../../docs/future-plans/execution-persistence.md) - State tracking and resume capability
+- [Artifact-Centric Orchestration](docs/artifact-centric-orchestration.md) - Planner/DAGExecutor design and execution model

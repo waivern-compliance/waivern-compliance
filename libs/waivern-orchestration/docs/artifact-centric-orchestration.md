@@ -289,7 +289,7 @@ class ArtifactStore(ABC):
     async def clear(self, run_id: str) -> None: ...
 ```
 
-See [Artifact Store Architecture](../../libs/waivern-artifact-store/docs/architecture.md) for detailed documentation.
+See [Artifact Store Architecture](../../waivern-artifact-store/docs/architecture.md) for detailed documentation.
 
 ## State Persistence & Resume
 
@@ -459,5 +459,4 @@ Logging format during execution:
 
 ## Related Documentation
 
-- [Child Runbook Composition](child-runbook-composition.md) - Detailed design for modular runbook composition
-- [Child Runbook User Guide](../../libs/waivern-orchestration/docs/child-runbook-composition.md) - How to use child runbooks
+- [Child Runbook Composition](child-runbook-composition.md) - Modular runbook composition design and user guide

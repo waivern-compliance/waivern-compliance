@@ -6,10 +6,10 @@ This guide explains how to configure the Waivern Compliance Tool and its depende
 
 1. Copy the example configuration:
    ```bash
-   cp apps/wct/.env.example apps/wct/.env
+   cp .env.example .env
    ```
 
-2. Edit `apps/wct/.env` with your credentials:
+2. Edit `.env` with your credentials:
    ```bash
    # Add your Anthropic API key (required for LLM analysis)
    ANTHROPIC_API_KEY=your_actual_api_key_here
@@ -33,7 +33,7 @@ The Waivern framework uses a **layered configuration approach**, following [12-f
 ### Configuration Layers (Highest to Lowest Priority)
 
 1. **System environment variables** - Set by deployment environment (production)
-2. **Application `.env` file** - Local development configuration (`apps/wct/.env`)
+2. **Workspace-root `.env` file** - Local development configuration (same directory as `pyproject.toml`)
 3. **Runbook properties** - Connector/analyser-specific config in YAML
 4. **Code defaults** - Fallback values in source code
 
@@ -112,9 +112,9 @@ connectors:
 
 ### Applications (wct)
 
-**Configuration location:** `apps/wct/.env`
+**Configuration location:** workspace-root `.env`
 
-Applications are responsible for loading configuration. WCT loads `.env` from its application directory on startup.
+WCT loads the workspace-root `.env` (next to `pyproject.toml`) at startup via the `python-dotenv` integration in `conftest.py` for tests and at CLI bootstrap for runtime.
 
 **What to configure:**
 - API keys (LLM providers)
@@ -141,7 +141,7 @@ Framework libraries read configuration from the environment using `os.getenv()`.
 Use `.env` file for convenience:
 
 ```bash
-# apps/wct/.env (gitignored)
+# .env (gitignored)
 ANTHROPIC_API_KEY=sk-ant-...
 MYSQL_HOST=localhost
 MYSQL_USER=dev_user
@@ -256,10 +256,10 @@ analysers:
 **Problem:** LLM service can't find API key
 
 **Solutions:**
-1. Check `.env` file exists: `ls apps/wct/.env`
+1. Check `.env` file exists at workspace root: `ls .env`
 2. Verify API key is set: `ANTHROPIC_API_KEY=sk-ant-...`
-3. Check file is in correct location: `apps/wct/.env` (not workspace root)
-4. Verify no typos in variable name
+3. Verify no typos in variable name
+4. Confirm you ran the command from the workspace root
 
 ### "Connection failed" for MySQL
 
@@ -277,7 +277,7 @@ analysers:
 **Problem:** WCT doesn't see environment variables
 
 **Solutions:**
-1. Verify `.env` file location: `apps/wct/.env`
+1. Verify `.env` file is at the workspace root (next to `pyproject.toml`)
 2. Check file format (no quotes around values usually)
 3. Restart terminal/shell after setting system env vars
 4. Check for typos in variable names
@@ -318,13 +318,6 @@ Each component package:
 - Configurable through runbook properties
 
 See individual package READMEs in `libs/waivern-*/` for component-specific configuration.
-
-## Migration Notes
-
-**Completed Migrations:**
-- **Phase 2:** `.env` moved from workspace root to `apps/wct/.env` for app-specific configuration
-- **Phase 3:** All components extracted to standalone packages with entry point discovery
-- **Phase 4-5:** waivern-community removed, true plugin architecture established
 
 ## Additional Resources
 

@@ -1,9 +1,5 @@
 # Regulatory Framework Architecture
 
-- **Status:** Implemented (Foundation)
-- **Last Updated:** 2026-01-18
-- **Related:** [Export Architecture](../future-plans/export-architecture.md)
-
 ## Overview
 
 This document describes the architectural approach for handling regulatory framework-specific knowledge and logic within WCF. It establishes principles for separating technical analysis from regulatory interpretation, and defines clear ownership boundaries between components.
@@ -259,5 +255,4 @@ A legal firm's GDPR ruleset is consumed by the `GDPRClassifier`. The ruleset pro
 
 ## Related Documents
 
-- [Export Architecture](../future-plans/export-architecture.md) - Exporter design and selection
-- [Artifact-Centric Orchestration](artifact-centric-orchestration.md) - Execution model for pipelines
+- [Artifact-Centric Orchestration](../../libs/waivern-orchestration/docs/artifact-centric-orchestration.md) - Execution model for pipelines
