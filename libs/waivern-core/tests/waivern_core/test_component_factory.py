@@ -48,7 +48,7 @@ Testing mock implementations (ConcreteTestFactory) is an anti-pattern because:
 - Provides false confidence in untested code
 - Wastes time maintaining tests that don't catch real bugs
 
-See: docs/architecture/di-factory-patterns.md for DI architecture details.
+See: libs/waivern-core/docs/di-factory-patterns.md for DI architecture details.
 
 References:
     - Contract Testing: https://martinfowler.com/bliki/ContractTest.html

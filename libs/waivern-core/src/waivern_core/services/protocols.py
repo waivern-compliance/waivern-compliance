@@ -34,7 +34,7 @@ class ServiceFactory[T](Protocol):
         - ServiceFactory: Infrastructure services (singleton), create() takes NO config
         - ComponentFactory: WCF components (transient), create(config) takes config dict
 
-        See: docs/architecture/di-factory-patterns.md for detailed comparison.
+        See: libs/waivern-core/docs/di-factory-patterns.md for detailed comparison.
 
     Example:
         ```python

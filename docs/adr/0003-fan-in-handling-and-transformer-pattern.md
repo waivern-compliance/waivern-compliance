@@ -385,7 +385,7 @@ Transformers will be introduced as a **new component type** alongside Connectors
 
 ## Related Documents
 
-- **Architecture:** [Artifact-Centric Orchestration](../architecture/artifact-centric-orchestration.md) - Execution model
+- **Architecture:** [Artifact-Centric Orchestration](../../libs/waivern-orchestration/docs/artifact-centric-orchestration.md) - Execution model
 - **ADR-0002:** [Dependency Injection](0002-dependency-injection-for-service-management.md) - Component factory pattern
 
 ---

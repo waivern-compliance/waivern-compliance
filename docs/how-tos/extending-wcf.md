@@ -1,7 +1,6 @@
 # Extending the Waivern Compliance Framework
 
-**Last Updated:** 2026-01-02
-**Related:** [Remote Analyser Protocol](../future-plans/remote-analyser-protocol.md), [WCF Core Components](../core-concepts/wcf-core-components.md)
+**Related:** [WCF Core Components](../core-concepts/wcf-core-components.md)
 
 ## Overview
 
@@ -11,23 +10,18 @@ The Waivern Compliance Framework (WCF) is designed to be extended. This document
 
 Before extending WCF, you should be familiar with:
 
-- **[WCF Core Components](../core-concepts/wcf-core-components.md)** - Understanding of connectors, analysers, schemas, and messages
+- **[WCF Core Components](../core-concepts/wcf-core-components.md)** - Connectors, analysers, schemas, and messages
 - **[Runbooks Documentation](../../apps/wct/runbooks/README.md)** - How WCT orchestrates components (artifact-centric format)
 - **Python 3.12+** - Modern Python features and type hints
-- **Dependency Injection** - ComponentFactory and ServiceContainer patterns
-
-**Recommended reading order:**
-1. [WCF Core Components](../core-concepts/wcf-core-components.md) - Start here
-2. This document - Understand extension mechanisms
-3. [Remote Analyser Protocol](../future-plans/remote-analyser-protocol.md) - For remote execution
+- **Dependency Injection** - ComponentFactory and ServiceContainer patterns (see [DI Factory Patterns](../../libs/waivern-core/docs/di-factory-patterns.md))
 
 ## WCF Extensibility Model
 
 WCF provides three primary extension mechanisms:
 
-1. **Component Development** - Create custom connectors, analysers, and rulesets
-2. **Entry Points** - Automatic component discovery via Python entry points
-3. **Remote Execution** - Host analysers as HTTP services
+1. **Custom components** — connectors, analysers, and rulesets
+2. **Entry points** — automatic component discovery
+3. **Source-code language plugins** — register new languages for the source-code analyser
 
 ## Component Development
 
@@ -139,265 +133,6 @@ Available Connectors:
 
 **See:** [Entry Points Epic (#188)](https://github.com/waivern-compliance/waivern-compliance/issues/188) for the implementation roadmap.
 
-## Remote Execution Model
-
-### Overview
-
-WCF supports remote analyser execution via HTTP API. This enables:
-- Analysers hosted as microservices
-- Scalable deployment architectures
-- Hybrid local/remote workflows
-- Third-party hosted services
-
-### Remote Analyser Protocol
-
-> **Note:** Remote analyser execution is a planned feature. See [Remote Analyser Protocol](../future-plans/remote-analyser-protocol.md) for the specification.
-
-Analysers can be hosted as HTTP services that implement the WCF remote analyser protocol:
-
-```yaml
-# runbook.yaml (planned format)
-artifacts:
-  data_source:
-    source:
-      type: "filesystem"
-      properties:
-        path: "./data"
-
-  analysis_result:
-    inputs: data_source
-    process:
-      type: "custom_analyser"
-      remote:
-        endpoint: "https://my-analyser-service.com/api/v1"
-        authentication:
-          type: "api_key"
-          key: "${MY_API_KEY}"
-    output: true
-```
-
-When WCT encounters a remote analyser:
-1. Serialises the input Message to JSON
-2. POSTs to the remote endpoint
-3. Validates the response against the output schema
-4. Continues execution with the result
-
-### Building Remote Analysers
-
-Your service must implement the WCF remote analyser protocol. All analyses are asynchronous:
-
-```http
-POST /v1/analysers/{analyser_type}/execute
-Content-Type: application/json
-Accept: text/event-stream  # or application/json for polling
-Authorization: Bearer {api_key}
-
-{
-  "request_id": "uuid-1234-5678",
-  "message": {
-    "id": "msg-5678-1234",
-    "content": { /* analysis data */ },
-    "schema": {
-      "name": "standard_input",
-      "version": "1.0.0"
-    }
-  }
-}
-
-→ Response (Streaming via SSE):
-HTTP/1.1 202 Accepted
-Content-Type: text/event-stream
-
-event: started
-data: {"request_id":"uuid-1234-5678","status":"processing"}
-
-event: completed
-data: {"request_id":"uuid-1234-5678","result_url":"/v1/analysers/results/uuid-1234-5678"}
-
-→ Fetch Result:
-GET /v1/analysers/results/uuid-1234-5678
-
-{
-  "request_id": "uuid-1234-5678",
-  "message": {
-    "id": "msg-5678-1234",
-    "content": { /* findings */ },
-    "schema": {
-      "name": "my_finding",
-      "version": "1.0.0"
-    }
-  }
-}
-```
-
-**See:** [Remote Analyser Protocol](../future-plans/remote-analyser-protocol.md) for complete API specification.
-
-### Discovery Endpoint
-
-Remote services should expose a discovery endpoint:
-
-```
-GET /v1/analysers
-
-→ Response:
-{
-  "analysers": [
-    {
-      "name": "custom_analyser",
-      "type": "custom_analyser",
-      "version": "1.0.0",
-      "supported_input_schemas": [
-        {"name": "standard_input", "version": "1.0.0"}
-      ],
-      "supported_output_schemas": [
-        {"name": "my_finding", "version": "1.0.0"}
-      ]
-    }
-  ]
-}
-```
-
-## Remote Rulesets
-
-### Overview
-
-In addition to remote analysers, WCF supports **remote rulesets** - pattern-based detection rules hosted as HTTP services. This enables:
-- Expert-curated compliance patterns (legal, regulatory, industry-specific)
-- Regularly updated pattern libraries without package reinstalls
-- Monetisation of compliance expertise by legal and regulatory professionals
-- Hybrid approach: run analysers locally with premium patterns
-
-### Use Case
-
-OSS analysers (e.g., `personal_data_analyser`) can use either:
-- **Local rulesets**: Free, community-maintained patterns installed via pip packages
-- **Remote rulesets**: Premium, expert-curated patterns accessed via API key
-
-This provides a **low-friction upgrade path** - users keep their local setup but gain access to professional-grade patterns.
-
-### Configuration
-
-> **Note:** Remote rulesets are a planned feature.
-
-Configure analysers to use remote rulesets:
-
-```yaml
-# runbook.yaml (planned format)
-artifacts:
-  file_content:
-    source:
-      type: "filesystem"
-      properties:
-        path: "./data"
-
-  personal_data_findings:
-    inputs: file_content
-    process:
-      type: "personal_data"
-      properties:
-        pattern_matching:
-          ruleset:
-            source: "remote"
-            endpoint: "https://api.example.com/v1/rulesets"
-            ruleset_name: "gdpr_personal_data_patterns"
-            version: "2024.11"
-            authentication:
-              type: "api_key"
-              key: "${PATTERNS_API_KEY}"
-            cache:
-              enabled: true
-              ttl_seconds: 3600
-    output: true
-```
-
-### Remote Ruleset Protocol
-
-Remote ruleset services should implement a simple HTTP API:
-
-```http
-GET /v1/rulesets/{ruleset_name}
-Authorization: Bearer {api_key}
-Accept: application/json
-
-→ Response:
-{
-  "name": "gdpr_personal_data_patterns",
-  "version": "2024.11",
-  "description": "GDPR personal data detection patterns curated by legal experts",
-  "patterns": [
-    {
-      "pattern": "email_address",
-      "regex": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}",
-      "category": "contact_information",
-      "confidence": 0.95
-    },
-    {
-      "pattern": "uk_national_insurance",
-      "regex": "[A-Z]{2}\\d{6}[A-D]",
-      "category": "government_identifier",
-      "confidence": 0.98
-    }
-  ],
-  "metadata": {
-    "last_updated": "2024-11-01",
-    "jurisdiction": "EU",
-    "regulation": "GDPR"
-  }
-}
-```
-
-### Value Proposition
-
-**For Legal/Compliance Professionals:**
-- Monetise regulatory expertise without building full analysers
-- Maintain authoritative pattern libraries
-- Provide jurisdiction-specific compliance patterns
-- Regular updates as regulations evolve
-
-**For Users:**
-- Access expert-curated patterns with minimal setup
-- No package reinstalls for pattern updates
-- Pay only for what you use
-- Run locally (no data leaves your infrastructure)
-
-**For Third-Party Service Providers:**
-- Offer industry-specific pattern libraries (healthcare, financial services, etc.)
-- Build subscription-based compliance pattern services
-- Integrate with existing compliance tools
-
-### Example: Upgrading OSS Analyser with Premium Patterns
-
-```yaml
-# Before: Using free community patterns
-artifacts:
-  findings:
-    inputs: file_content
-    process:
-      type: "personal_data"
-      properties:
-        pattern_matching:
-          ruleset: "local/personal_data/1.0.0"  # Built-in OSS patterns
-    output: true
-
-# After: Upgrade to expert patterns with API key (planned)
-artifacts:
-  findings:
-    inputs: file_content
-    process:
-      type: "personal_data"
-      properties:
-        pattern_matching:
-          ruleset:
-            source: "remote"
-            endpoint: "https://legal-patterns.example.com/v1/rulesets"
-            ruleset_name: "gdpr_legal_expert_patterns"
-            authentication:
-              api_key: "${LEGAL_PATTERNS_KEY}"
-    output: true
-```
-
-Same analyser, better patterns - no code changes required!
-
 ## Deployment Models for Custom Components
 
 ### Local Development
@@ -411,53 +146,6 @@ pip install my-wcf-components
 # Components automatically available
 wct ls-analysers
 wct run my-runbook.yaml
-```
-
-### Self-Hosted Services
-
-> **Note:** Remote analyser hosting is a planned feature.
-
-Deploy your analysers as HTTP services:
-
-```bash
-# Your service
-uvicorn my_analyser.api:app --host 0.0.0.0 --port 8000
-```
-
-### Hybrid Models (Planned)
-
-Combine local and remote components:
-
-```yaml
-# runbook.yaml (planned format)
-artifacts:
-  # Extract from database
-  database_content:
-    source:
-      type: "mysql"
-      properties:
-        host: "localhost"
-        database: "mydb"
-
-  # Pattern match locally (fast, cheap)
-  candidates:
-    inputs: database_content
-    process:
-      type: "personal_data"
-      properties:
-        pattern_matching:
-          ruleset: "local/personal_data/1.0.0"
-
-  # Validate remotely (your proprietary logic)
-  validated_findings:
-    inputs: candidates
-    process:
-      type: "my_advanced_analyser"
-      remote:
-        endpoint: "https://api.mycompany.com"
-        authentication:
-          api_key: "${MY_API_KEY}"
-    output: true
 ```
 
 ## Schema-Driven Extension
@@ -589,9 +277,6 @@ pip install git+https://github.com/myorg/my-wcf-components.git
 
 1. **Validate inputs** - Don't trust data from connectors
 2. **Sanitise outputs** - Prevent injection attacks
-3. **Authentication** - Secure remote endpoints
-4. **Rate limiting** - Protect remote services
-5. **API versioning** - Support backward compatibility
 
 ## Example: Building a Custom Compliance Package
 
@@ -652,8 +337,7 @@ Consider open-sourcing your components:
 
 - [WCF Core Components](../core-concepts/wcf-core-components.md) - Framework architecture
 - [Runbooks Documentation](../../apps/wct/runbooks/README.md) - Runbook format and examples
-- [Remote Analyser Protocol](../future-plans/remote-analyser-protocol.md) - HTTP API specification (planned)
-- [DAG Orchestration Layer](../future-plans/dag-orchestration-layer.md) - Execution engine design
+- [Artifact-Centric Orchestration](../../libs/waivern-orchestration/docs/artifact-centric-orchestration.md) - Execution engine design
 
 ## Enterprise Extensions
 

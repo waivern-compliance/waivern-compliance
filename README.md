@@ -40,9 +40,9 @@ uv run pre-commit install
 
 ```bash
 # Copy environment template
-cp apps/wct/.env.example apps/wct/.env
+cp .env.example .env
 
-# Edit apps/wct/.env with your API key
+# Edit .env with your API key
 # ANTHROPIC_API_KEY=your_api_key_here
 
 # Test configuration

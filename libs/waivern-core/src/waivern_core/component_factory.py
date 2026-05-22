@@ -60,7 +60,7 @@ class ComponentFactory[T](ABC):
         For infrastructure services (LLM, database pools, HTTP clients), use the
         ServiceFactory protocol instead.
 
-        See: docs/architecture/di-factory-patterns.md for detailed comparison.
+        See: libs/waivern-core/docs/di-factory-patterns.md for detailed comparison.
 
     Type Parameters:
         T: The component type this factory creates (Analyser or Connector)

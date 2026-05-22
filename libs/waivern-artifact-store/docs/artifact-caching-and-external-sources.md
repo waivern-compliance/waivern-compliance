@@ -2,7 +2,7 @@
 
 - **Status:** Design Proposal
 - **Created:** 2025-01-08
-- **Related:** [Architecture](./architecture.md), [Execution Persistence](../../../docs/future-plans/execution-persistence.md)
+- **Related:** [Architecture](./architecture.md)
 
 ## Problem
 
@@ -431,5 +431,4 @@ storage:
 ## Related Documents
 
 - [Architecture](./architecture.md) — Artifact store architecture
-- [Execution Persistence](../../../docs/future-plans/execution-persistence.md) — Original persistence proposal
-- [Artifact-Centric Orchestration](../../../docs/architecture/artifact-centric-orchestration.md) — DAG execution model
+- [Artifact-Centric Orchestration](../../waivern-orchestration/docs/artifact-centric-orchestration.md) — DAG execution model

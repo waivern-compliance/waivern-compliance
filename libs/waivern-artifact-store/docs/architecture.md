@@ -454,4 +454,4 @@ Backend selection is controlled via the `type` configuration field.
 ## Related Documentation
 
 - [Persistent Artifact Store Design](../../../.local/plans/persistent-artifact-store-design.md) - Design and implementation phases
-- [Artifact-Centric Orchestration](../../../docs/architecture/artifact-centric-orchestration.md) - How the DAGExecutor uses the artifact store
+- [Artifact-Centric Orchestration](../../waivern-orchestration/docs/artifact-centric-orchestration.md) - How the DAGExecutor uses the artifact store

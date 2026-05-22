@@ -3,7 +3,7 @@
 This file provides shared fixtures and configuration for all tests across
 the entire monorepo workspace.
 
-See docs/how-tos/testing-patterns.md for the singleton testing pattern.
+See CLAUDE.md "Singleton Test Isolation" for the pattern used by the autouse fixtures below.
 """
 
 import pytest
