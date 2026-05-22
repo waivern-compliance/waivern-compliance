@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
 
@@ -48,10 +48,10 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
@@ -65,12 +65,12 @@ jobs:
       - name: Generate WCT CLI artifacts
         run: |
           mkdir -p ci_artifacts
-          uv run wct run runbooks/samples/LAMP_stack_lite.yaml --output-dir ci_artifacts/lamp_stack_lite
-          uv run wct run runbooks/samples/file_content_analysis.yaml --output-dir ci_artifacts/file_content_analysis
+          uv run wct run apps/wct/runbooks/samples/LAMP_stack_lite.yaml --output-dir ci_artifacts/lamp_stack_lite
+          uv run wct run apps/wct/runbooks/samples/file_content_analysis.yaml --output-dir ci_artifacts/file_content_analysis
         continue-on-error: true
 
       - name: Upload WCT CLI artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: wct-cli-outputs-${{ matrix.python-version }}-${{ matrix.runner }}
