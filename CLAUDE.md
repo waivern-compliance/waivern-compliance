@@ -24,8 +24,7 @@ waivern-compliance/
 │   ├── waivern-analysers-shared/      # Shared analyser utilities
 │   ├── waivern-personal-data-analyser/
 │   ├── waivern-data-subject-analyser/
-│   ├── waivern-processing-purpose-analyser/
-│   └── waivern-data-export-analyser/  # Work in progress
+│   └── waivern-processing-purpose-analyser/
 └── apps/
     └── wct/                           # CLI application
         ├── runbooks/samples/          # Sample runbooks
