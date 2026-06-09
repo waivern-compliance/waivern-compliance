@@ -137,7 +137,7 @@ class TestGDPRProcessingPurposeClassification:
         finding = make_indicator_finding("payment_processing")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["purpose_category"] == "operational"
@@ -156,7 +156,7 @@ class TestGDPRProcessingPurposeClassification:
         finding = make_indicator_finding("behavioural_analytics")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["purpose_category"] == "analytics"
@@ -173,7 +173,7 @@ class TestGDPRProcessingPurposeClassification:
         finding = make_indicator_finding("ai_model_training")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["purpose_category"] == "ai_and_ml"
@@ -189,7 +189,7 @@ class TestGDPRProcessingPurposeClassification:
         finding = make_indicator_finding("fraud_detection")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["purpose_category"] == "security"
@@ -205,7 +205,7 @@ class TestGDPRProcessingPurposeClassification:
         finding = make_indicator_finding("targeted_advertising")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["purpose_category"] == "marketing_and_advertising"
@@ -220,7 +220,7 @@ class TestGDPRProcessingPurposeClassification:
         finding = make_indicator_finding("unknown_purpose_xyz")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["purpose_category"] == "unclassified"
@@ -235,7 +235,7 @@ class TestGDPRProcessingPurposeClassification:
         finding = make_indicator_finding("behavioural_analytics")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["processing_purpose"] == "behavioural_analytics"
@@ -262,7 +262,7 @@ class TestSummaryGeneration:
         ]
         input_msg = make_input_message(findings)
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         summary = result.content["summary"]
 
         assert summary["total_findings"] == 3
@@ -283,7 +283,7 @@ class TestSummaryGeneration:
         ]
         input_msg = make_input_message(findings)
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         summary = result.content["summary"]
 
         assert summary["sensitive_purposes_count"] == 2
@@ -301,7 +301,7 @@ class TestSummaryGeneration:
         ]
         input_msg = make_input_message(findings)
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         summary = result.content["summary"]
 
         assert summary["dpia_required_count"] == 1
@@ -333,7 +333,7 @@ class TestEdgeCases:
         msg1 = make_input_message([make_indicator_finding("behavioural_analytics")])
         msg2 = make_input_message([make_indicator_finding("fraud_detection")])
 
-        result = classifier.process([msg1, msg2], output_schema)
+        result, _ = classifier.process([msg1, msg2], output_schema)
 
         assert result.content["summary"]["total_findings"] == 2
 
@@ -351,7 +351,7 @@ class TestEdgeCases:
         }
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         # Should default to "unknown" source when metadata is missing

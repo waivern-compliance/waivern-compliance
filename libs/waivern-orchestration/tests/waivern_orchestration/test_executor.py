@@ -390,7 +390,7 @@ class TestDAGExecutorProcess:
         mock_processor_class.get_supported_output_schemas.return_value = [output_schema]
         processor_factory.component_class = mock_processor_class
         mock_processor = MagicMock(spec=["process"])
-        mock_processor.process.return_value = processed_message
+        mock_processor.process.return_value = (processed_message, [])
         processor_factory.create.return_value = mock_processor
 
         artifacts = {
@@ -564,7 +564,7 @@ class TestDAGExecutorArtifactMetadata:
         mock_processor_class.get_supported_output_schemas.return_value = [output_schema]
         processor_factory.component_class = mock_processor_class
         mock_processor = MagicMock(spec=["process"])
-        mock_processor.process.return_value = processed_message
+        mock_processor.process.return_value = (processed_message, [])
         processor_factory.create.return_value = mock_processor
 
         artifacts = {

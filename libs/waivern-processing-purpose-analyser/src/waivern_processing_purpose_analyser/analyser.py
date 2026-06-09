@@ -144,7 +144,7 @@ class ProcessingPurposeAnalyser(Analyser):
         state: ProcessingPurposePrepareState,
         results: Sequence[DispatchResult],
         output_schema: Schema,
-    ) -> Message | PrepareResult[ProcessingPurposePrepareState]:
+    ) -> tuple[Message, list[Message]] | PrepareResult[ProcessingPurposePrepareState]:
         """Produce output from state and dispatch results.
 
         Paths:
@@ -157,11 +157,12 @@ class ProcessingPurposeAnalyser(Analyser):
           ``finalise()`` merges primary + fallback outcomes into a Message.
         """
         if not state.llm_enabled or state.orchestrator_state is None:
-            return self._result_builder.build_output_message(
+            primary = self._result_builder.build_output_message(
                 state.all_findings,
                 output_schema,
                 validation_result=None,
             )
+            return primary, []
 
         orchestrator = self._rebuild_orchestrator(state)
         llm_result = self._extract_llm_result(results)
@@ -183,11 +184,12 @@ class ProcessingPurposeAnalyser(Analyser):
             f"({len(outcome.removed_groups)} groups removed)"
         )
 
-        return self._result_builder.build_output_message(
+        primary = self._result_builder.build_output_message(
             outcome.kept_findings,
             output_schema,
             validation_result=outcome,
         )
+        return primary, []
 
     def deserialise_prepare_result(
         self, raw: dict[str, Any]

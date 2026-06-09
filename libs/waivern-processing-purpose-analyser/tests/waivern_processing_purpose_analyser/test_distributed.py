@@ -306,8 +306,9 @@ class TestFinalise:
         message = _make_standard_input_purpose_message()
 
         prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
-        result = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
-
+        finalise_outcome = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
         assert isinstance(result, Message)
         assert "validation_summary" not in result.content.get("analysis_metadata", {})
         # Findings preserved without filtering
@@ -319,8 +320,9 @@ class TestFinalise:
         message = _make_no_pattern_message()
 
         prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
-        result = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
-
+        finalise_outcome = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
         assert isinstance(result, Message)
         assert result.content["findings"] == []
         assert "validation_summary" not in result.content.get("analysis_metadata", {})
@@ -343,10 +345,11 @@ class TestFinalise:
         verdicts = {f.id: "TRUE_POSITIVE" for f in sampled}
         dispatch_result = _build_llm_dispatch_result(llm_request, verdicts)
 
-        result = analyser.finalise(
+        finalise_outcome = analyser.finalise(
             prepare_result.state, [dispatch_result], OUTPUT_SCHEMA
         )
-
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
         assert isinstance(result, Message)
         metadata = result.content["analysis_metadata"]
         assert "validation_summary" in metadata
@@ -378,8 +381,9 @@ class TestFinalise:
 
         # Empty results list: orchestrator treats this as a failed dispatch
         # and every strategy finding is categorised as skipped (BATCH_ERROR).
-        result = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
-
+        finalise_outcome = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
         assert isinstance(result, Message)
         metadata = result.content["analysis_metadata"]
         assert metadata["validation_summary"]["all_succeeded"] is False
@@ -472,10 +476,11 @@ class TestFinaliseMultiRound:
             verdicts={sampled[0].id: "TRUE_POSITIVE"},
         )
 
-        final = analyser.finalise(
+        finalise_outcome = analyser.finalise(
             round_two_prep.state, [fallback_result], OUTPUT_SCHEMA
         )
-
+        assert isinstance(finalise_outcome, tuple)
+        final, _sidecars = finalise_outcome
         assert isinstance(final, Message)
         metadata = final.content["analysis_metadata"]
         assert "validation_summary" in metadata
@@ -500,10 +505,11 @@ class TestFinaliseMultiRound:
             llm_request, verdicts={f.id: "TRUE_POSITIVE" for f in sampled}
         )
 
-        outcome = analyser.finalise(
+        finalise_outcome = analyser.finalise(
             prepare_result.state, [dispatch_result], OUTPUT_SCHEMA
         )
-
+        assert isinstance(finalise_outcome, tuple)
+        outcome, _sidecars = finalise_outcome
         assert isinstance(outcome, Message)
 
     def test_fallback_round_marker_applied_to_both_primary_and_fallback_kept(
@@ -547,10 +553,11 @@ class TestFinaliseMultiRound:
             fallback_request,
             verdicts={fallback_kept.id: "TRUE_POSITIVE"},
         )
-        final = analyser.finalise(
+        finalise_outcome = analyser.finalise(
             round_two_prep.state, [fallback_result], OUTPUT_SCHEMA
         )
-
+        assert isinstance(finalise_outcome, tuple)
+        final, _sidecars = finalise_outcome
         assert isinstance(final, Message)
         findings_by_id = {f["id"]: f for f in final.content["findings"]}
         # Primary-validated finding carries marker

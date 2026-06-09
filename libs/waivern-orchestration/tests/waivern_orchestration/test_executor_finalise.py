@@ -66,7 +66,7 @@ class TestDistributedArtifactMetadata:
 
         processor = StubDistributedProcessor(
             prepare_result=PrepareResult(state=StubState(), requests=[request]),
-            finalise_results=[final_message],
+            finalise_results=[(final_message, [])],
         )
 
         connector_factory = create_mock_connector_factory(
@@ -151,7 +151,7 @@ class TestDistributedArtifactMetadata:
 
         processor = StubDistributedProcessor(
             prepare_result=PrepareResult(state=StubState(), requests=[request]),
-            finalise_results=[final_message],
+            finalise_results=[(final_message, [])],
         )
 
         connector_factory = create_mock_connector_factory(
@@ -214,7 +214,7 @@ class TestDistributedArtifactMetadata:
 
         processor = StubDistributedProcessor(
             prepare_result=PrepareResult(state=StubState(), requests=[request]),
-            finalise_results=[final_message],
+            finalise_results=[(final_message, [])],
         )
 
         connector_factory = create_mock_connector_factory(
@@ -260,6 +260,83 @@ class TestDistributedArtifactMetadata:
 
 
 # =============================================================================
+# Tuple Return Contract
+# =============================================================================
+
+
+class TestTupleFinaliseResult:
+    """Tests for finalise() returning ``(primary, sidecars)`` tuples."""
+
+    async def test_tuple_result_completes_artifact_without_extra_rounds(
+        self,
+    ) -> None:
+        """finalise() returning ``(primary, sidecars)`` completes the artifact.
+
+        Pins the executor branch that treats a tuple finalise result as
+        completion (save artifact, sorter.done) rather than as a
+        ``PrepareResult`` requiring another dispatch-finalise round.
+        """
+        source_schema = Schema("standard_input", "1.0.0")
+        output_schema = Schema("findings", "1.0.0")
+        source_message = create_test_message({"files": []})
+        primary_message = create_test_message(
+            {"findings": ["tuple_complete"]}, schema=output_schema
+        )
+
+        request = DispatchRequest(name="tuple_req")
+        dispatch_result = DispatchResult(request_id=request.request_id)
+
+        processor = StubDistributedProcessor(
+            prepare_result=PrepareResult(state=StubState(), requests=[request]),
+            finalise_results=[(primary_message, [])],
+        )
+
+        connector_factory = create_mock_connector_factory(
+            "src", [source_schema], source_message
+        )
+        dispatcher = create_mock_dispatcher([dispatch_result])
+
+        artifacts = {
+            "source": ArtifactDefinition(
+                source=SourceConfig(type="src", properties={})
+            ),
+            "findings": ArtifactDefinition(
+                inputs="source",
+                process=ProcessConfig(type="dist_proc", properties={}),
+            ),
+        }
+        plan = create_simple_plan(
+            artifacts,
+            {
+                "source": (None, source_schema),
+                "findings": ([source_schema], output_schema),
+            },
+        )
+
+        registry = create_mock_registry(
+            with_container=True,
+            connector_factories={"src": connector_factory},
+            processor_factories={
+                "dist_proc": create_distributed_processor_factory(
+                    "dist_proc", processor
+                ),
+            },
+        )
+        registry.get_dispatcher_for.return_value = dispatcher
+        executor = DAGExecutor(registry)
+
+        exec_result = await executor.execute(plan)
+
+        assert "findings" in exec_result.completed
+        assert dispatcher.dispatch.call_count == 1
+        assert processor.call_log == ["prepare", "finalise"]
+
+        store = registry.container.get_service(ArtifactStore)
+        stored = await store.get_artifact(exec_result.run_id, "findings")
+        assert stored.content == primary_message.content
+
+
+# =============================================================================
 # Multi-Round
 # =============================================================================
 
@@ -298,7 +375,7 @@ class TestMultiRoundDispatch:
             prepare_result=PrepareResult(
                 state=StubState(value="round_1"), requests=[req1]
             ),
-            finalise_results=[round2_prepare, final_message],
+            finalise_results=[round2_prepare, (final_message, [])],
         )
 
         connector_factory = create_mock_connector_factory(

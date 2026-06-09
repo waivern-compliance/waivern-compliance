@@ -250,8 +250,9 @@ class TestFinalise:
         message = _make_employee_customer_message()
 
         prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
-        result = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
-
+        finalise_outcome = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
         assert isinstance(result, Message)
         assert "validation_summary" not in result.content.get("analysis_metadata", {})
         assert len(result.content["findings"]) == len(prepare_result.state.all_findings)
@@ -262,8 +263,9 @@ class TestFinalise:
         message = _make_no_pattern_message()
 
         prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
-        result = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
-
+        finalise_outcome = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
         assert isinstance(result, Message)
         assert result.content["findings"] == []
         assert "validation_summary" not in result.content.get("analysis_metadata", {})
@@ -285,10 +287,11 @@ class TestFinalise:
         verdicts = {f.id: "TRUE_POSITIVE" for f in sampled}
         dispatch_result = _build_llm_dispatch_result(llm_request, verdicts)
 
-        result = analyser.finalise(
+        finalise_outcome = analyser.finalise(
             prepare_result.state, [dispatch_result], OUTPUT_SCHEMA
         )
-
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
         assert isinstance(result, Message)
         metadata = result.content["analysis_metadata"]
         assert "validation_summary" in metadata
@@ -316,8 +319,9 @@ class TestFinalise:
         prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
         original_count = len(prepare_result.state.all_findings)
 
-        result = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
-
+        finalise_outcome = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
         assert isinstance(result, Message)
         metadata = result.content["analysis_metadata"]
         assert metadata["validation_summary"]["all_succeeded"] is False

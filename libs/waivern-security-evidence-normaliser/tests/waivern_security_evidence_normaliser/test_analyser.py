@@ -93,7 +93,7 @@ class TestNormalisePersonalData:
         analyser = SecurityEvidenceNormaliser(valid_config)
         msg = self._make_message("email", "user.php")
 
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         findings = result.content["findings"]
         assert len(findings) == 1
@@ -128,7 +128,7 @@ class TestNormalisePersonalData:
         )
 
         analyser = SecurityEvidenceNormaliser(valid_config)
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         findings = result.content["findings"]
         assert len(findings) == 1
@@ -143,7 +143,7 @@ class TestNormalisePersonalData:
         analyser = SecurityEvidenceNormaliser(valid_config)
         msg = self._make_message("health", "health.php")
 
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         findings = result.content["findings"]
         domains = {f["security_domain"] for f in findings}
@@ -159,7 +159,7 @@ class TestNormalisePersonalData:
         msg = self._make_message("unknown_xyz", "file.php")
 
         with caplog.at_level(logging.DEBUG):
-            result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
+            result, _ = analyser.process([msg], Schema("security_evidence", "1.0.0"))
 
         assert result.content["findings"] == []
         assert "unknown_xyz" in caplog.text
@@ -219,7 +219,7 @@ class TestNormaliseProcessingPurpose:
         analyser = SecurityEvidenceNormaliser(valid_config)
         msg = self._make_message("user_identity_login", "auth.php")
 
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         findings = result.content["findings"]
         assert len(findings) == 1
@@ -259,7 +259,7 @@ class TestNormaliseProcessingPurpose:
         )
 
         analyser = SecurityEvidenceNormaliser(valid_config)
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         findings = result.content["findings"]
         assert len(findings) == 1
@@ -273,7 +273,7 @@ class TestNormaliseProcessingPurpose:
         msg = self._make_message("unknown_purpose_xyz", "file.php")
 
         with caplog.at_level(logging.DEBUG):
-            result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
+            result, _ = analyser.process([msg], Schema("security_evidence", "1.0.0"))
 
         assert result.content["findings"] == []
         assert "unknown_purpose_xyz" in caplog.text
@@ -337,7 +337,7 @@ class TestNormaliseCryptoQuality:
         analyser = SecurityEvidenceNormaliser(valid_config)
         msg = self._make_message("bcrypt", "strong", "positive")
 
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         findings = result.content["findings"]
         assert len(findings) == 1
@@ -353,7 +353,7 @@ class TestNormaliseCryptoQuality:
         analyser = SecurityEvidenceNormaliser(valid_config)
         msg = self._make_message("md5", "deprecated", "negative")
 
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         findings = result.content["findings"]
         assert len(findings) == 1
@@ -369,7 +369,7 @@ class TestNormaliseCryptoQuality:
         analyser = SecurityEvidenceNormaliser(valid_config)
         msg = self._make_message("bcrypt", "strong", "positive")
 
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         finding = result.content["findings"][0]
         assert len(finding["evidence"]) == 1
@@ -412,7 +412,7 @@ class TestNormaliseCryptoQuality:
         )
 
         analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         finding = result.content["findings"][0]
         contents = [e["content"] for e in finding["evidence"]]
@@ -450,7 +450,7 @@ class TestNormaliseCryptoQuality:
 
         config = SecurityEvidenceNormaliserConfig(maximum_evidence_items=2)
         analyser = SecurityEvidenceNormaliser(config)
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         assert len(result.content["findings"][0]["evidence"]) == 2
 
@@ -462,7 +462,7 @@ class TestNormaliseCryptoQuality:
         msg = self._make_message("unknown_algo_xyz", "weak", "negative")
 
         with caplog.at_level(logging.DEBUG):
-            result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
+            result, _ = analyser.process([msg], Schema("security_evidence", "1.0.0"))
 
         assert result.content["findings"] == []
         assert "unknown_algo_xyz" in caplog.text
@@ -503,7 +503,7 @@ class TestRequireReviewPropagation:
         )
 
         analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
-        result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
+        result, _ = analyser.process([msg], Schema("security_evidence", "1.0.0"))
 
         findings = result.content["findings"]
         assert len(findings) == 1
@@ -547,7 +547,7 @@ class TestFanIn:
         msg2 = self._make_pd_message("msg2", "phone", "contact.php")
 
         analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
-        result = analyser.process([msg1, msg2], Schema("security_evidence", "1.0.0"))
+        result, _ = analyser.process([msg1, msg2], Schema("security_evidence", "1.0.0"))
 
         findings = result.content["findings"]
         source_locations = {f["metadata"]["source"] for f in findings}
@@ -588,7 +588,7 @@ class TestOutputMessageStructure:
         output_schema = Schema("security_evidence", "1.0.0")
 
         analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         assert isinstance(result, Message)
         assert result.schema == output_schema
@@ -645,7 +645,7 @@ class TestSummaryDomainBreakdown:
         msg2 = self._make_cq_message("bcrypt", "strong", "positive", "file_b.php")
 
         analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
-        result = analyser.process([msg1, msg2], Schema("security_evidence", "1.0.0"))
+        result, _ = analyser.process([msg1, msg2], Schema("security_evidence", "1.0.0"))
 
         summary = result.content["summary"]
         assert summary["domains_identified"] == 1
@@ -706,7 +706,7 @@ class TestSummaryDomainBreakdown:
         )
 
         analyser = SecurityEvidenceNormaliser(SecurityEvidenceNormaliserConfig())
-        result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
+        result, _ = analyser.process([msg], Schema("security_evidence", "1.0.0"))
         domains = result.content["summary"]["domains"]
 
         # authentication (2 findings) must come before logging_monitoring (1 finding)
@@ -785,7 +785,7 @@ class TestNormaliseServiceIntegration:
         analyser = SecurityEvidenceNormaliser(valid_config)
         msg = self._make_message("cloud_infrastructure", "operational", "aws.php")
 
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         findings = result.content["findings"]
         assert len(findings) == 1
@@ -830,7 +830,7 @@ class TestNormaliseServiceIntegration:
         )
 
         analyser = SecurityEvidenceNormaliser(valid_config)
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         findings = result.content["findings"]
         assert len(findings) == 1
@@ -844,7 +844,7 @@ class TestNormaliseServiceIntegration:
         msg = self._make_message("unknown_service_xyz", "operational", "file.php")
 
         with caplog.at_level(logging.DEBUG):
-            result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
+            result, _ = analyser.process([msg], Schema("security_evidence", "1.0.0"))
 
         assert result.content["findings"] == []
         assert "unknown_service_xyz" in caplog.text
@@ -858,7 +858,7 @@ class TestNormaliseServiceIntegration:
         analyser = SecurityEvidenceNormaliser(valid_config)
         msg = self._make_message("identity_management", "operational", "auth.php")
 
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         findings = result.content["findings"]
         domains = {f["security_domain"] for f in findings}
@@ -936,7 +936,7 @@ class TestNormaliseDataCollection:
         analyser = SecurityEvidenceNormaliser(valid_config)
         msg = self._make_message("form_data", "http_post", "contact.php")
 
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         findings = result.content["findings"]
         assert len(findings) == 1
@@ -978,7 +978,7 @@ class TestNormaliseDataCollection:
         )
 
         analyser = SecurityEvidenceNormaliser(valid_config)
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         findings = result.content["findings"]
         assert len(findings) == 1
@@ -992,7 +992,7 @@ class TestNormaliseDataCollection:
         msg = self._make_message("unknown_type_xyz", "unknown", "file.php")
 
         with caplog.at_level(logging.DEBUG):
-            result = analyser.process([msg], Schema("security_evidence", "1.0.0"))
+            result, _ = analyser.process([msg], Schema("security_evidence", "1.0.0"))
 
         assert result.content["findings"] == []
         assert "unknown_type_xyz" in caplog.text
@@ -1006,7 +1006,7 @@ class TestNormaliseDataCollection:
         analyser = SecurityEvidenceNormaliser(valid_config)
         msg = self._make_message("file_upload", "uploaded_files", "upload.php")
 
-        result = analyser.process([msg], output_schema)
+        result, _ = analyser.process([msg], output_schema)
 
         findings = result.content["findings"]
         assert len(findings) == 1

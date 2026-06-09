@@ -118,7 +118,9 @@ class TestFinalise:
         )
 
         prepare_result = extractor.prepare(inputs=[msg], output_schema=OUTPUT_SCHEMA)
-        result = extractor.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        finalise_outcome = extractor.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
 
         output = parse_output(result)
         assert len(output.findings) == 2
@@ -148,7 +150,11 @@ class TestFinalise:
             skipped=[],
         )
 
-        result = extractor.finalise(prepare_result.state, [llm_result], OUTPUT_SCHEMA)
+        finalise_outcome = extractor.finalise(
+            prepare_result.state, [llm_result], OUTPUT_SCHEMA
+        )
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
 
         output = parse_output(result)
         finding = output.findings[0]
@@ -176,7 +182,11 @@ class TestFinalise:
             skipped=[],
         )
 
-        result = extractor.finalise(prepare_result.state, [llm_result], OUTPUT_SCHEMA)
+        finalise_outcome = extractor.finalise(
+            prepare_result.state, [llm_result], OUTPUT_SCHEMA
+        )
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
 
         output = parse_output(result)
         finding = output.findings[0]
@@ -215,7 +225,11 @@ class TestFinalise:
             skipped=[],
         )
 
-        result = extractor.finalise(prepare_result.state, [llm_result], OUTPUT_SCHEMA)
+        finalise_outcome = extractor.finalise(
+            prepare_result.state, [llm_result], OUTPUT_SCHEMA
+        )
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
 
         output = parse_output(result)
         assert output.summary.total_documents == 3

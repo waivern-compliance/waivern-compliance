@@ -74,7 +74,7 @@ class SourceCodeAnalyser(Analyser):
         self,
         inputs: list[Message],
         output_schema: Schema,
-    ) -> Message:
+    ) -> tuple[Message, list[Message]]:
         """Process standard_input data to produce source_code output.
 
         Supports same-schema fan-in: multiple standard_input messages are merged
@@ -85,7 +85,8 @@ class SourceCodeAnalyser(Analyser):
             output_schema: Output schema (source_code)
 
         Returns:
-            Message containing source code with language detection
+            ``(primary, [])`` where ``primary`` is the source-code analysis
+            message with language detection. No sidecars are emitted.
 
         Raises:
             AnalyserProcessingError: If processing fails
@@ -191,7 +192,7 @@ class SourceCodeAnalyser(Analyser):
                 f"SourceCodeAnalyser processed {total_files} files, {total_lines} lines"
             )
 
-            return output_message
+            return output_message, []
 
         except Exception as e:
             logger.error(f"Failed to process source code: {e}")

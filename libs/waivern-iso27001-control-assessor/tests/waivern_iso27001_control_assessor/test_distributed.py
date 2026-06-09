@@ -111,7 +111,9 @@ class TestFinalise:
         prepare_result = assessor.prepare(
             inputs=[evidence_msg], output_schema=OUTPUT_SCHEMA
         )
-        result = assessor.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        finalise_outcome = assessor.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
 
         output = parse_output(result)
         finding = output.findings[0]
@@ -133,7 +135,9 @@ class TestFinalise:
         prepare_result = assessor.prepare(
             inputs=[evidence_msg], output_schema=OUTPUT_SCHEMA
         )
-        result = assessor.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        finalise_outcome = assessor.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
 
         output = parse_output(result)
         finding = output.findings[0]
@@ -165,7 +169,11 @@ class TestFinalise:
             skipped=[],
         )
 
-        result = assessor.finalise(prepare_result.state, [llm_result], OUTPUT_SCHEMA)
+        finalise_outcome = assessor.finalise(
+            prepare_result.state, [llm_result], OUTPUT_SCHEMA
+        )
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
 
         output = parse_output(result)
         finding = output.findings[0]
@@ -202,7 +210,11 @@ class TestFinalise:
             skipped=[],
         )
 
-        result = assessor.finalise(prepare_result.state, [llm_result], OUTPUT_SCHEMA)
+        finalise_outcome = assessor.finalise(
+            prepare_result.state, [llm_result], OUTPUT_SCHEMA
+        )
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
 
         output = parse_output(result)
         finding = output.findings[0]
@@ -229,7 +241,11 @@ class TestFinalise:
             skipped=[],
         )
 
-        result = assessor.finalise(prepare_result.state, [llm_result], OUTPUT_SCHEMA)
+        finalise_outcome = assessor.finalise(
+            prepare_result.state, [llm_result], OUTPUT_SCHEMA
+        )
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
 
         output = parse_output(result)
         finding = output.findings[0]

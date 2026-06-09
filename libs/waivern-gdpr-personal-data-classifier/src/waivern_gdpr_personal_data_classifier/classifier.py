@@ -89,7 +89,9 @@ class GDPRPersonalDataClassifier(Classifier):
         return [Schema("gdpr_personal_data", "1.0.0")]
 
     @override
-    def process(self, inputs: list[Message], output_schema: Schema) -> Message:
+    def process(
+        self, inputs: list[Message], output_schema: Schema
+    ) -> tuple[Message, list[Message]]:
         """Process input findings and classify according to GDPR."""
         if not inputs:
             raise ValueError(
@@ -108,13 +110,13 @@ class GDPRPersonalDataClassifier(Classifier):
             classified = self._classify_finding(finding)
             classified_findings.append(classified)
 
-        # Build and return output message
-        return self._result_builder.build_output_message(
+        primary = self._result_builder.build_output_message(
             classified_findings,
             output_schema,
             self._ruleset.name,
             self._ruleset.version,
         )
+        return primary, []
 
     def _classify_finding(
         self, finding: dict[str, Any]

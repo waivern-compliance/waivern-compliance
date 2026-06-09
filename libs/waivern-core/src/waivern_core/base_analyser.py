@@ -28,8 +28,11 @@ class Analyser(Processor):
             def get_input_requirements(cls) -> list[list[InputRequirement]]:
                 return [[InputRequirement("standard_input", "1.0.0")]]
 
-            def process(self, inputs: list[Message], output_schema: Schema) -> Message:
+            def process(
+                self, inputs: list[Message], output_schema: Schema
+            ) -> tuple[Message, list[Message]]:
                 # Analysis logic here
-                ...
+                primary = Message(...)
+                return primary, []
 
     """

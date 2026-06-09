@@ -115,8 +115,8 @@ class Processor(abc.ABC):
         self,
         inputs: list[Message],
         output_schema: Schema,
-    ) -> Message:
-        """Process input data and produce output.
+    ) -> tuple[Message, list[Message]]:
+        """Process input data and produce a primary output plus optional sidecars.
 
         This is the synchronous path. Subclasses override it for in-process
         transformation. Subclasses implementing the ``DistributedProcessor``
@@ -132,16 +132,22 @@ class Processor(abc.ABC):
             inputs: List of input messages to process. For single-input
                 processors, this will contain one message. For fan-in
                 processors, this contains multiple messages.
-            output_schema: Output schema for result validation
+            output_schema: Output schema for result validation.
 
         Returns:
-            Processed results that conform to the processor's output schema
+            A two-element tuple ``(primary, sidecars)``:
+
+            - ``primary``: the artifact's main output. Flowed downstream
+              in the DAG and validated against ``output_schema``.
+            - ``sidecars``: zero or more typed ``Message`` objects persisted
+              alongside the primary but NOT flowed downstream. Each sidecar
+              carries its own schema. Use ``[]`` when no sidecars are emitted.
 
         Raises:
             NotImplementedError: If the subclass does not override this method
                 and is not routed through the ``DistributedProcessor`` path.
-            ProcessorError: If processing fails
-            SchemaLoadError: If schema validation fails
+            ProcessorError: If processing fails.
+            SchemaLoadError: If schema validation fails.
 
         """
         raise NotImplementedError(

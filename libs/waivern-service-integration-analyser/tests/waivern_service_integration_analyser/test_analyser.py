@@ -260,7 +260,7 @@ class TestServiceIntegrationOutputStructure:
             schema=Schema("source_code", "1.0.0"),
         )
 
-        result = analyser.process([message], output_schema)
+        result, _ = analyser.process([message], output_schema)
 
         assert isinstance(result, Message)
         assert result.schema == output_schema
@@ -301,7 +301,7 @@ class TestServiceIntegrationOutputStructure:
             schema=Schema("source_code", "1.0.0"),
         )
 
-        result = analyser.process([message], output_schema)
+        result, _ = analyser.process([message], output_schema)
 
         summary = result.content["summary"]
         category_names = {c["service_category"] for c in summary["categories"]}
@@ -357,7 +357,7 @@ class TestServiceIntegrationSourceCodeInput:
             schema=Schema("source_code", "1.0.0"),
         )
 
-        result = analyser.process([message], output_schema)
+        result, _ = analyser.process([message], output_schema)
 
         assert isinstance(result, Message)
         assert result.schema == output_schema
@@ -425,7 +425,7 @@ class TestServiceIntegrationSourceCodeInput:
             schema=Schema("source_code", "1.0.0"),
         )
 
-        result = analyser.process([message_a, message_b], output_schema)
+        result, _ = analyser.process([message_a, message_b], output_schema)
 
         sources = {f["metadata"]["source"] for f in result.content["findings"]}
         assert "a/billing.php" in sources

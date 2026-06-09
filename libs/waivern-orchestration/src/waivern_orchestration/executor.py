@@ -591,7 +591,7 @@ class DAGExecutor:
         entry: _DistributedEntry,
         results: Sequence[DispatchResult],
         ctx: _ExecutionContext,
-    ) -> Message | PrepareResult[Any]:
+    ) -> tuple[Message, list[Message]] | PrepareResult[Any]:
         """Run finalise() in the thread pool, governed by the semaphore.
 
         Follows the same bridge pattern as ``_run_prepare``.
@@ -628,11 +628,12 @@ class DAGExecutor:
         """Orchestrate Phase 2–3 with multi-round loop for distributed entries.
 
         Drives the dispatch → finalise cycle until all entries produce a
-        ``Message`` or max rounds is exceeded:
+        ``(primary, sidecars)`` tuple or max rounds is exceeded:
         1. Filter out entries already marked pending by dispatch
         2. Dispatch all entries with requests (Phase 2)
         3. Finalise each entry (Phase 3)
-        4. Message → save artifact, mark completed, clean up, notify sorter
+        4. ``(primary, sidecars)`` tuple → save artifact, mark completed,
+           clean up, notify sorter
         5. PrepareResult → queue for another round
         6. Repeat until no entries remain or max rounds exceeded
 
@@ -679,9 +680,14 @@ class DAGExecutor:
                     )
                     continue
 
-                if isinstance(result, Message):
+                if isinstance(result, tuple):
+                    primary, _sidecars = result
                     await self._save_distributed_artifact(
-                        entry, result, results_by_artifact[entry.artifact_id], plan, ctx
+                        entry,
+                        primary,
+                        results_by_artifact[entry.artifact_id],
+                        plan,
+                        ctx,
                     )
                     sorter.done(entry.artifact_id)
                 else:
@@ -1105,7 +1111,8 @@ class DAGExecutor:
 
         def sync_process() -> Message:
             processor = factory.create(process_config.properties)
-            return processor.process(inputs, output_schema)
+            primary, _sidecars = processor.process(inputs, output_schema)
+            return primary
 
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(thread_pool, sync_process)

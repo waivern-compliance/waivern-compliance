@@ -183,7 +183,9 @@ class TestFinalise:
         prepare_result = classifier.prepare(
             inputs=[message], output_schema=OUTPUT_SCHEMA
         )
-        result = classifier.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        finalise_outcome = classifier.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
 
         metadata = result.content["analysis_metadata"]
         assert metadata["validation_summary"]["method_used"] == "regex"
@@ -208,7 +210,9 @@ class TestFinalise:
             inputs=[message], output_schema=OUTPUT_SCHEMA
         )
         assert prepare_result.state.llm_enabled is True
-        result = classifier.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        finalise_outcome = classifier.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
 
         metadata = result.content["analysis_metadata"]
         assert metadata["validation_summary"]["method_used"] == "regex"
@@ -251,9 +255,11 @@ class TestFinalise:
             finding_modifiers={classified[0].id: ["minor"]},
         )
 
-        result = classifier.finalise(
+        finalise_outcome = classifier.finalise(
             prepare_result.state, [dispatch_result], OUTPUT_SCHEMA
         )
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
 
         metadata = result.content["analysis_metadata"]
         assert metadata["validation_summary"]["method_used"] == "llm"
@@ -286,9 +292,11 @@ class TestFinalise:
             skipped=[],
         )
 
-        result = classifier.finalise(
+        finalise_outcome = classifier.finalise(
             prepare_result.state, [empty_dispatch_result], OUTPUT_SCHEMA
         )
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
 
         metadata = result.content["analysis_metadata"]
         assert metadata["validation_summary"]["method_used"] == "regex"
@@ -307,7 +315,9 @@ class TestFinalise:
         prepare_result = classifier.prepare(
             inputs=[message], output_schema=OUTPUT_SCHEMA
         )
-        result = classifier.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        finalise_outcome = classifier.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
 
         assert result.content["findings"] == []
         assert result.content["summary"]["total_findings"] == 0

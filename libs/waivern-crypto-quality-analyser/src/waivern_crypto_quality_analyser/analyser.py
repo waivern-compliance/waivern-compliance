@@ -144,7 +144,7 @@ class CryptoQualityAnalyser(Analyser):
         self,
         inputs: list[Message],
         output_schema: Schema,
-    ) -> Message:
+    ) -> tuple[Message, list[Message]]:
         """Process data to find cryptographic algorithm patterns.
 
         Supports same-schema fan-in: multiple standard_input messages are merged
@@ -155,9 +155,11 @@ class CryptoQualityAnalyser(Analyser):
             output_schema: Expected output schema.
 
         Returns:
-            Output message with crypto quality findings from all inputs combined.
+            ``(primary, [])`` where ``primary`` is the crypto quality findings
+            message from all inputs combined. No sidecars are emitted.
 
         """
         data_items = self._merge_input_data_items(inputs)
         findings = self._find_patterns_in_data_items(data_items)
-        return self._result_builder.build_output_message(findings, output_schema)
+        primary = self._result_builder.build_output_message(findings, output_schema)
+        return primary, []

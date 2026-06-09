@@ -278,7 +278,7 @@ class DistributedProcessor[S: BaseModel](Protocol):
         state: S,
         results: Sequence[DispatchResult],
         output_schema: Schema,
-    ) -> Message | PrepareResult[S]:
+    ) -> tuple[Message, list[Message]] | PrepareResult[S]:
         """Produce output from intermediate state and dispatch results.
 
         This method must be synchronous with no internal I/O. It receives
@@ -293,8 +293,14 @@ class DistributedProcessor[S: BaseModel](Protocol):
             output_schema: The schema for the output message.
 
         Returns:
-            A ``Message`` if processing is complete, or a new
+            ``(primary, sidecars)`` if processing is complete, or a new
             ``PrepareResult`` if another dispatch round is needed.
+
+            - ``primary``: the artifact's main output, flowed downstream
+              in the DAG and validated against ``output_schema``.
+            - ``sidecars``: zero or more typed ``Message`` objects persisted
+              alongside the primary but NOT flowed downstream. Each sidecar
+              carries its own schema. Use ``[]`` when no sidecars are emitted.
 
         """
         ...
