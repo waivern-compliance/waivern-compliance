@@ -2,9 +2,9 @@
 
 from typing import override
 
-from waivern_analysers_shared.llm_validation.models import LLMValidationResponseModel
 from waivern_analysers_shared.llm_validation.strategy import FilteringValidationStrategy
 from waivern_analysers_shared.types import LLMValidationConfig
+from waivern_core import LLMValidationResponseModel
 from waivern_llm import BatchingMode, ItemGroup, LLMRequest
 from waivern_schemas.personal_data_indicator import PersonalDataIndicatorModel
 

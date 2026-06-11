@@ -7,14 +7,11 @@ skipped findings.
 
 from typing import Any, cast
 
-from waivern_analysers_shared.llm_validation.models import (
-    LLMValidationResponseModel,
-    LLMValidationResultModel,
-)
 from waivern_analysers_shared.llm_validation.validation_orchestrator import (
     OrchestratorPrepareState,
 )
 from waivern_analysers_shared.types import LLMValidationConfig, PatternMatchingConfig
+from waivern_core import LLMValidationResponseModel, LLMValidationResultModel
 from waivern_core.dispatch import PrepareResult
 from waivern_core.message import Message
 from waivern_core.schemas import Schema

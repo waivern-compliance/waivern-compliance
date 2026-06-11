@@ -4,17 +4,14 @@ import logging
 from abc import ABC, abstractmethod
 from typing import override
 
-from waivern_core import Finding
+from waivern_core import Finding, LLMValidationResponseModel
 from waivern_core.types import JsonValue
 from waivern_llm import LLMDispatchResult, LLMRequest, SkippedFinding, SkipReason
 
 from waivern_analysers_shared.llm_validation.decision_engine import (
     ValidationDecisionEngine,
 )
-from waivern_analysers_shared.llm_validation.models import (
-    LLMValidationOutcome,
-    LLMValidationResponseModel,
-)
+from waivern_analysers_shared.llm_validation.models import LLMValidationOutcome
 from waivern_analysers_shared.types import LLMValidationConfig
 
 logger = logging.getLogger(__name__)

@@ -38,6 +38,12 @@ from waivern_core.errors import (
     ProcessorProcessingError,
     WaivernError,
 )
+from waivern_core.llm_validation_types import (
+    LLMValidationResponseModel,
+    LLMValidationResultModel,
+    RecommendedActionType,
+    ValidationResultType,
+)
 from waivern_core.message import ExecutionContext, Message, MessageExtensions
 from waivern_core.protocols import Finding, FindingMetadata
 from waivern_core.ruleset_types import (
@@ -109,6 +115,11 @@ __all__ = [
     # Types
     "InputRequirement",
     "JsonValue",
+    # LLM validation types
+    "LLMValidationResponseModel",
+    "LLMValidationResultModel",
+    "RecommendedActionType",
+    "ValidationResultType",
     # Protocols
     "DistributedProcessor",
     "Finding",

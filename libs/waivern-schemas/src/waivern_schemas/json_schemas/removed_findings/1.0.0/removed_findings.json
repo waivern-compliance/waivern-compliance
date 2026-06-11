@@ -1,0 +1,168 @@
+{
+  "$defs": {
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "LLMValidationResultModel": {
+      "description": "Strongly typed model for LLM validation results.\n\nThis model represents a single validation result from the LLM, including\nthe finding ID for explicit matching back to the original finding.\nUsing UUIDs instead of indices makes matching robust against LLM reordering.",
+      "properties": {
+        "finding_id": {
+          "description": "UUID of the finding this result corresponds to (echo back exactly)",
+          "minLength": 1,
+          "title": "Finding Id",
+          "type": "string"
+        },
+        "validation_result": {
+          "default": "TRUE_POSITIVE",
+          "description": "The validation result",
+          "enum": [
+            "TRUE_POSITIVE",
+            "FALSE_POSITIVE"
+          ],
+          "title": "Validation Result",
+          "type": "string"
+        },
+        "confidence": {
+          "default": 0.0,
+          "description": "Confidence score from LLM (0.0-1.0)",
+          "title": "Confidence",
+          "type": "number"
+        },
+        "reasoning": {
+          "default": "No reasoning provided",
+          "description": "Reasoning provided by LLM",
+          "title": "Reasoning",
+          "type": "string"
+        },
+        "recommended_action": {
+          "default": "keep",
+          "description": "Recommended action from LLM",
+          "enum": [
+            "keep",
+            "discard",
+            "flag_for_review"
+          ],
+          "title": "Recommended Action",
+          "type": "string"
+        }
+      },
+      "required": [
+        "finding_id"
+      ],
+      "title": "LLMValidationResultModel",
+      "type": "object"
+    },
+    "RemovedFinding": {
+      "description": "Single finding removed by LLM validation, paired with its verdict.\n\n``original_finding`` is stored as a JSON-serialised dict so that the\naudit-trail schema is decoupled from the producer analyser's specific\nfinding type. Migration across analyser-side schema versions is handled\nby pure forward-migration functions at read time.",
+      "properties": {
+        "original_finding": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "Serialised form of the analyser's finding at the time of removal",
+          "title": "Original Finding",
+          "type": "object"
+        },
+        "llm_verdict": {
+          "$ref": "#/$defs/LLMValidationResultModel",
+          "description": "The LLM verdict that caused the finding to be removed"
+        },
+        "removal_timestamp": {
+          "description": "When this finding was removed",
+          "title": "Removal Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "original_finding",
+        "llm_verdict"
+      ],
+      "title": "RemovedFinding",
+      "type": "object"
+    }
+  },
+  "description": "Sidecar audit-trail payload listing findings removed by LLM validation.\n\nCarries enough context (analyser identity, run ID, ruleset reference) to\nbe interpreted on its own without reference to the primary output, which\nis required for downstream tooling that aggregates audit data across\nruns.",
+  "properties": {
+    "analyser_name": {
+      "description": "Name of the analyser that produced this audit trail",
+      "title": "Analyser Name",
+      "type": "string"
+    },
+    "run_id": {
+      "description": "Run ID for cross-artifact correlation",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "ruleset_name": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Ruleset URI used for pattern matching. ``None`` when the producing analyser is not ruleset-driven.",
+      "title": "Ruleset Name"
+    },
+    "ruleset_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Version of the ruleset referenced by ``ruleset_name``",
+      "title": "Ruleset Version"
+    },
+    "removed_findings": {
+      "description": "Findings removed during LLM validation, each paired with its verdict",
+      "items": {
+        "$ref": "#/$defs/RemovedFinding"
+      },
+      "title": "Removed Findings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "analyser_name",
+    "run_id",
+    "removed_findings"
+  ],
+  "title": "RemovedFindingsOutput",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0"
+}

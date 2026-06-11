@@ -1,85 +1,31 @@
 """Shared models and constants for LLM validation.
 
-This module defines the result types for the LLM validation layer stack:
+This module defines:
 
-    LLM Response Models     → What the LLM returns (Pydantic for parsing)
     Strategy Results        → What strategies return to orchestrator
     Orchestration Results   → What orchestrator returns to caller
 
+The structured LLM response types (``LLMValidationResultModel``,
+``LLMValidationResponseModel`` and their literal aliases) live in
+``waivern_core.llm_validation_types`` so they can be shared between the LLM
+dispatch layer, the schema layer and this orchestration layer.
 """
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 from waivern_core import Finding
 from waivern_llm import SkippedFinding, SkipReason
 
 __all__ = [
     "FALLBACK_ELIGIBLE_SKIP_REASONS",
     "LLMValidationOutcome",
-    "LLMValidationResponseModel",
-    "LLMValidationResultModel",
-    "RecommendedActionType",
     "RemovedGroup",
     "SkippedFinding",
     "SkipReason",
     "ValidationResult",
-    "ValidationResultType",
 ]
-
-
-# =============================================================================
-# Type Aliases and Constants
-# =============================================================================
-
-ValidationResultType = Literal["TRUE_POSITIVE", "FALSE_POSITIVE"]
-RecommendedActionType = Literal["keep", "discard", "flag_for_review"]
-
-
-# =============================================================================
-# LLM Response Models (Pydantic for structured output parsing)
-# =============================================================================
-
-
-class LLMValidationResultModel(BaseModel):
-    """Strongly typed model for LLM validation results.
-
-    This model represents a single validation result from the LLM, including
-    the finding ID for explicit matching back to the original finding.
-    Using UUIDs instead of indices makes matching robust against LLM reordering.
-    """
-
-    finding_id: str = Field(
-        min_length=1,
-        description="UUID of the finding this result corresponds to (echo back exactly)",
-    )
-    validation_result: ValidationResultType = Field(
-        default="TRUE_POSITIVE", description="The validation result"
-    )
-    confidence: float = Field(
-        default=0.0,
-        description="Confidence score from LLM (0.0-1.0)",
-    )
-    reasoning: str = Field(
-        default="No reasoning provided", description="Reasoning provided by LLM"
-    )
-    recommended_action: RecommendedActionType = Field(
-        default="keep", description="Recommended action from LLM"
-    )
-
-
-class LLMValidationResponseModel(BaseModel):
-    """Wrapper model for structured output from LLM validation.
-
-    This model wraps the list of validation results in a single field,
-    which is required for LangChain's with_structured_output() method.
-    """
-
-    results: list[LLMValidationResultModel] = Field(
-        description="List of validation results for each finding"
-    )
 
 
 # Skip reasons eligible for fallback validation

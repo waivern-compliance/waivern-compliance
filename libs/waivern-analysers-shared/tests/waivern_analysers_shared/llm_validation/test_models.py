@@ -1,14 +1,13 @@
 """Tests for shared LLM validation models - focuses on business-critical constraints."""
 
 import pytest
+from waivern_core import LLMValidationResultModel
 from waivern_core.schemas import (
     BaseFindingEvidence,
     BaseFindingMetadata,
     BaseFindingModel,
     PatternMatchDetail,
 )
-
-from waivern_analysers_shared.llm_validation import LLMValidationResultModel
 
 
 def _create_test_finding() -> BaseFindingModel[BaseFindingMetadata]:

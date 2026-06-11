@@ -12,15 +12,12 @@ production ruleset data.
 from typing import Any, cast
 
 import pytest
-from waivern_analysers_shared.llm_validation.models import (
-    LLMValidationResponseModel,
-    LLMValidationResultModel,
-)
 from waivern_analysers_shared.llm_validation.validation_orchestrator import (
     OrchestratorPrepareState,
 )
 from waivern_analysers_shared.types import LLMValidationConfig, PatternMatchingConfig
 from waivern_analysers_shared.utilities import RulesetManager
+from waivern_core import LLMValidationResponseModel, LLMValidationResultModel
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_llm.types import BatchingMode, LLMDispatchResult, LLMRequest

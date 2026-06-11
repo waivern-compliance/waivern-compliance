@@ -16,14 +16,10 @@ from waivern_analysers_shared.llm_validation.grouping import (
 from waivern_analysers_shared.llm_validation.models import (
     FALLBACK_ELIGIBLE_SKIP_REASONS,
     LLMValidationOutcome,
-    LLMValidationResponseModel,
-    LLMValidationResultModel,
-    RecommendedActionType,
     RemovedGroup,
     SkippedFinding,
     SkipReason,
     ValidationResult,
-    ValidationResultType,
 )
 from waivern_analysers_shared.llm_validation.protocols import (
     ConcernProvider,
@@ -53,14 +49,10 @@ __all__ = [
     # Models
     "FALLBACK_ELIGIBLE_SKIP_REASONS",
     "LLMValidationOutcome",
-    "LLMValidationResponseModel",
-    "LLMValidationResultModel",
-    "RecommendedActionType",
     "RemovedGroup",
     "SkippedFinding",
     "SkipReason",
     "ValidationResult",
-    "ValidationResultType",
     # Protocols
     "ConcernProvider",
     "SourceProvider",
