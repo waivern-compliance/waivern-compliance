@@ -162,7 +162,7 @@ class ProcessingPurposeAnalyser(Analyser):
                 output_schema,
                 validation_result=None,
             )
-            return primary, []
+            return primary, self._result_builder.build_sidecars(None, state.run_id)
 
         orchestrator = self._rebuild_orchestrator(state)
         llm_result = self._extract_llm_result(results)
@@ -189,7 +189,7 @@ class ProcessingPurposeAnalyser(Analyser):
             output_schema,
             validation_result=outcome,
         )
-        return primary, []
+        return primary, self._result_builder.build_sidecars(outcome, state.run_id)
 
     def deserialise_prepare_result(
         self, raw: dict[str, Any]

@@ -305,11 +305,13 @@ class TestFinalise:
         prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
         finalise_outcome = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
         assert isinstance(finalise_outcome, tuple)
-        result, _sidecars = finalise_outcome
+        result, sidecars = finalise_outcome
         assert isinstance(result, Message)
         assert "validation_summary" not in result.content.get("analysis_metadata", {})
         # Findings preserved without filtering
         assert len(result.content["findings"]) == len(prepare_result.state.all_findings)
+        # LLM never ran → no audit content
+        assert sidecars == []
 
     def test_no_findings_produces_empty_output(self) -> None:
         """Empty findings state → empty output, no validation_summary."""
@@ -319,10 +321,12 @@ class TestFinalise:
         prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
         finalise_outcome = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
         assert isinstance(finalise_outcome, tuple)
-        result, _sidecars = finalise_outcome
+        result, sidecars = finalise_outcome
         assert isinstance(result, Message)
         assert result.content["findings"] == []
         assert "validation_summary" not in result.content.get("analysis_metadata", {})
+        # No findings → no removals → no audit content
+        assert sidecars == []
 
     def test_llm_result_filters_false_positives_and_marks_kept(self) -> None:
         """LLM TRUE_POSITIVE/FALSE_POSITIVE verdicts → filtering + marker."""
@@ -346,7 +350,7 @@ class TestFinalise:
             prepare_result.state, [dispatch_result], OUTPUT_SCHEMA
         )
         assert isinstance(finalise_outcome, tuple)
-        result, _sidecars = finalise_outcome
+        result, sidecars = finalise_outcome
         assert isinstance(result, Message)
         metadata = result.content["analysis_metadata"]
         assert "validation_summary" in metadata
@@ -362,6 +366,8 @@ class TestFinalise:
                     )
                     is True
                 )
+        # All-TRUE_POSITIVE verdicts → no removals → no audit content
+        assert sidecars == []
 
     def test_missing_llm_result_treats_all_as_skipped_with_failure(self) -> None:
         """No LLM result (e.g. dispatcher error) → findings kept, all_succeeded=False.
@@ -380,13 +386,59 @@ class TestFinalise:
         # and every strategy finding is categorised as skipped (BATCH_ERROR).
         finalise_outcome = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
         assert isinstance(finalise_outcome, tuple)
-        result, _sidecars = finalise_outcome
+        result, sidecars = finalise_outcome
         assert isinstance(result, Message)
         metadata = result.content["analysis_metadata"]
         assert metadata["validation_summary"]["all_succeeded"] is False
         assert metadata["validation_summary"]["skipped_count"] > 0
         # Conservative keep: every original finding preserved
         assert len(result.content["findings"]) == original_count
+        # BATCH_ERROR never reached the LLM → no removals → no audit content
+        assert sidecars == []
+
+    def test_sidecar_carries_serialised_finding_and_reason(self) -> None:
+        """FALSE_POSITIVE removals → one sidecar with identity fields and serialised entries.
+
+        Cascade-reason synthesis (``"Inferred — …"`` prefix) is exercised at
+        the orchestrator layer (Step 3); here we only need to confirm that
+        whatever ``reason`` the orchestrator attaches to a ``RemovedItem``
+        reaches the sidecar entry verbatim, and that the wrapper carries the
+        analyser identity for cross-artifact correlation.
+        """
+        analyser = _make_analyser()
+        message = _make_standard_input_purpose_message()
+
+        prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
+        assert prepare_result.state.orchestrator_state is not None
+        sampled = prepare_result.state.orchestrator_state.strategy_findings
+
+        assert isinstance(prepare_result.requests[0], LLMRequest)
+        llm_request = cast(
+            LLMRequest[ProcessingPurposeIndicatorModel], prepare_result.requests[0]
+        )
+        verdicts = {f.id: "FALSE_POSITIVE" for f in sampled}
+        dispatch_result = _build_llm_dispatch_result(llm_request, verdicts)
+
+        finalise_outcome = analyser.finalise(
+            prepare_result.state, [dispatch_result], OUTPUT_SCHEMA
+        )
+        assert isinstance(finalise_outcome, tuple)
+        _result, sidecars = finalise_outcome
+        assert len(sidecars) == 1
+        sidecar = sidecars[0]
+        assert sidecar.schema == Schema("removed_findings", "1.0.0")
+        assert sidecar.content["analyser_name"] == "processing_purpose_analyser"
+        assert sidecar.content["run_id"] == RUN_ID
+        assert sidecar.content["ruleset"] == "local/processing_purposes/1.0.0"
+
+        removed = sidecar.content["removed_findings"]
+        assert len(removed) >= 1
+        sampled_ids = {f.id for f in sampled}
+        for entry in removed:
+            assert entry["original_finding"]["id"] in sampled_ids
+            # LLM-direct reasons preserve the verdict's reasoning verbatim.
+            # _build_llm_dispatch_result attaches "test reasoning" to every result.
+            assert entry["reason"] == "test reasoning"
 
 
 # =============================================================================
@@ -477,10 +529,12 @@ class TestFinaliseMultiRound:
             round_two_prep.state, [fallback_result], OUTPUT_SCHEMA
         )
         assert isinstance(finalise_outcome, tuple)
-        final, _sidecars = finalise_outcome
+        final, sidecars = finalise_outcome
         assert isinstance(final, Message)
         metadata = final.content["analysis_metadata"]
         assert "validation_summary" in metadata
+        # Both rounds verdicted TRUE_POSITIVE → no removals → no audit content
+        assert sidecars == []
 
     def test_source_code_without_eligible_skipped_completes_in_single_round(
         self,
@@ -506,8 +560,10 @@ class TestFinaliseMultiRound:
             prepare_result.state, [dispatch_result], OUTPUT_SCHEMA
         )
         assert isinstance(finalise_outcome, tuple)
-        outcome, _sidecars = finalise_outcome
+        outcome, sidecars = finalise_outcome
         assert isinstance(outcome, Message)
+        # All TRUE_POSITIVE → no removals → no audit content
+        assert sidecars == []
 
     def test_fallback_round_marker_applied_to_both_primary_and_fallback_kept(
         self,
@@ -554,8 +610,10 @@ class TestFinaliseMultiRound:
             round_two_prep.state, [fallback_result], OUTPUT_SCHEMA
         )
         assert isinstance(finalise_outcome, tuple)
-        final, _sidecars = finalise_outcome
+        final, sidecars = finalise_outcome
         assert isinstance(final, Message)
+        # Both rounds verdicted TRUE_POSITIVE → no removals → no audit content
+        assert sidecars == []
         findings_by_id = {f["id"]: f for f in final.content["findings"]}
         # Primary-validated finding carries marker
         assert (
