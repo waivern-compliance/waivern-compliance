@@ -58,16 +58,13 @@ class RemovedFindingsOutput(BaseSchemaOutput):
     run_id: str = Field(
         description="Run ID for cross-artifact correlation",
     )
-    ruleset_name: str | None = Field(
+    ruleset: str | None = Field(
         default=None,
         description=(
-            "Ruleset URI used for pattern matching. ``None`` when the producing "
-            "analyser is not ruleset-driven."
+            "Ruleset URI used for pattern matching, in the framework's standard "
+            "``provider/name/version`` form (e.g. ``local/personal_data_indicator/1.0.0``). "
+            "``None`` when the producing analyser is not ruleset-driven."
         ),
-    )
-    ruleset_version: str | None = Field(
-        default=None,
-        description="Version of the ruleset referenced by ``ruleset_name``",
     )
     removed_findings: list[RemovedFinding] = Field(
         description="Findings removed during LLM validation, each paired with its removal reason",

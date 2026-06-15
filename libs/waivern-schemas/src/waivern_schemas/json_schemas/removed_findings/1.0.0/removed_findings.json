@@ -73,7 +73,7 @@
       "title": "Run Id",
       "type": "string"
     },
-    "ruleset_name": {
+    "ruleset": {
       "anyOf": [
         {
           "type": "string"
@@ -83,21 +83,8 @@
         }
       ],
       "default": null,
-      "description": "Ruleset URI used for pattern matching. ``None`` when the producing analyser is not ruleset-driven.",
-      "title": "Ruleset Name"
-    },
-    "ruleset_version": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "description": "Version of the ruleset referenced by ``ruleset_name``",
-      "title": "Ruleset Version"
+      "description": "Ruleset URI used for pattern matching, in the framework's standard ``provider/name/version`` form (e.g. ``local/personal_data_indicator/1.0.0``). ``None`` when the producing analyser is not ruleset-driven.",
+      "title": "Ruleset"
     },
     "removed_findings": {
       "description": "Findings removed during LLM validation, each paired with its removal reason",
