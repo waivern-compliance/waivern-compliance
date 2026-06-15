@@ -22,6 +22,7 @@ __all__ = [
     "FALLBACK_ELIGIBLE_SKIP_REASONS",
     "LLMValidationOutcome",
     "RemovedGroup",
+    "RemovedItem",
     "SkippedFinding",
     "SkipReason",
     "ValidationResult",
@@ -37,6 +38,35 @@ FALLBACK_ELIGIBLE_SKIP_REASONS: frozenset[SkipReason] = frozenset(
         SkipReason.MISSING_SOURCE,
     }
 )
+
+
+# =============================================================================
+# Shared Result Types (used by both strategy and orchestration layers)
+# =============================================================================
+
+
+class RemovedItem[T: Finding](BaseModel):
+    """A finding removed during LLM validation, paired with its removal reason.
+
+    The strategy layer attaches an LLM verdict's ``reasoning`` verbatim when
+    a finding is directly flagged FALSE_POSITIVE. The orchestrator
+    synthesises an ``"Inferred — …"`` reason when a finding is cascade-removed
+    as part of a whole-group removal (Case A in ``_apply_group_decisions``).
+    Pairing the reason with each finding at the point of removal means no
+    parallel-list invariants for downstream consumers to maintain.
+
+    Implemented as a Pydantic BaseModel so instances can live inside
+    ``LLMValidationOutcome.llm_validated_removed`` and round-trip through
+    ``model_dump(mode="json")`` on the distributed-processor resume path.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    finding: T
+    """The original finding that was removed."""
+
+    reason: str
+    """Human-readable removal reason — LLM verdict reasoning verbatim, or a synthesised cascade reason."""
 
 
 # =============================================================================
@@ -95,8 +125,12 @@ class ValidationResult[T: Finding]:
     skipped members inherit the group-level judgement.
     """
 
-    removed_findings: list[T]
-    """Individual findings marked FALSE_POSITIVE by LLM."""
+    removed_findings: list[RemovedItem[T]]
+    """Individual findings removed during validation, each paired with its removal reason.
+
+    Includes both LLM-direct removals (reason = verdict reasoning) and
+    group-cascade removals (reason = synthesised ``"Inferred — …"`` string).
+    """
 
     removed_groups: list[RemovedGroup]
     """Groups removed entirely (only when grouping is enabled)."""
@@ -142,8 +176,8 @@ class LLMValidationOutcome[T: Finding](BaseModel):
     llm_validated_kept: list[T]
     """Findings LLM saw and marked as TRUE_POSITIVE."""
 
-    llm_validated_removed: list[T]
-    """Findings LLM saw and marked as FALSE_POSITIVE."""
+    llm_validated_removed: list[RemovedItem[T]]
+    """Findings LLM saw and marked as FALSE_POSITIVE, each paired with the LLM's verdict reasoning."""
 
     llm_not_flagged: list[T]
     """Findings LLM saw but didn't mention (kept via fail-safe)."""
@@ -177,7 +211,9 @@ class LLMValidationOutcome[T: Finding](BaseModel):
 
         Marks both llm_validated_kept and llm_not_flagged since both went
         through LLM validation without being flagged as FALSE_POSITIVE.
-        Skipped findings are NOT marked (never went through LLM).
+        Skipped findings are NOT marked (never went through LLM). Removed
+        items are NOT marker-touched either — marking is for findings that
+        survive into the primary output, and removed items are filtered out.
 
         Args:
             marker: Function that takes a finding and returns a marked copy.

@@ -21,6 +21,7 @@ from waivern_llm import (
     SkipReason,
 )
 
+from waivern_analysers_shared.llm_validation.models import RemovedItem
 from waivern_analysers_shared.llm_validation.strategy import (
     FilteringValidationStrategy,
 )
@@ -84,7 +85,7 @@ class TestDefaultFinaliseValidation:
     """Tests for the default finalise_validation() on FilteringValidationStrategy."""
 
     def test_deserialises_responses_and_categorises_findings(self) -> None:
-        """Raw dict responses -> TRUE_POSITIVE in kept, FALSE_POSITIVE in removed."""
+        """Raw dict responses -> TRUE_POSITIVE in kept, FALSE_POSITIVE in removed paired with LLM reasoning verbatim."""
         strategy = _FilteringStrategyForTests()
         kept_finding = _make_finding("kept")
         removed_finding = _make_finding("removed")
@@ -104,7 +105,9 @@ class TestDefaultFinaliseValidation:
         )
 
         assert outcome.llm_validated_kept == [kept_finding]
-        assert outcome.llm_validated_removed == [removed_finding]
+        assert outcome.llm_validated_removed == [
+            RemovedItem(finding=removed_finding, reason="test reasoning")
+        ]
         assert outcome.llm_not_flagged == []
         assert outcome.skipped == []
 

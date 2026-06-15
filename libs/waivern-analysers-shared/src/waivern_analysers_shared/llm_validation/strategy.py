@@ -11,7 +11,10 @@ from waivern_llm import LLMDispatchResult, LLMRequest, SkippedFinding, SkipReaso
 from waivern_analysers_shared.llm_validation.decision_engine import (
     ValidationDecisionEngine,
 )
-from waivern_analysers_shared.llm_validation.models import LLMValidationOutcome
+from waivern_analysers_shared.llm_validation.models import (
+    LLMValidationOutcome,
+    RemovedItem,
+)
 from waivern_analysers_shared.types import LLMValidationConfig
 
 logger = logging.getLogger(__name__)
@@ -157,10 +160,15 @@ class FilteringValidationStrategy[TFinding: Finding](
         self,
         raw_responses: list[dict[str, JsonValue]],
         findings_by_id: dict[str, TFinding],
-    ) -> tuple[list[TFinding], list[TFinding], set[str]]:
-        """Deserialise raw responses and split findings into kept/removed."""
+    ) -> tuple[list[TFinding], list[RemovedItem[TFinding]], set[str]]:
+        """Deserialise raw responses and split findings into kept/removed.
+
+        Each removed finding is paired with the LLM verdict's ``reasoning``
+        field verbatim, surfacing the model's own justification at the point
+        of removal for downstream audit-trail consumers.
+        """
         kept: list[TFinding] = []
-        removed: list[TFinding] = []
+        removed: list[RemovedItem[TFinding]] = []
         processed_ids: set[str] = set()
 
         for raw_response in raw_responses:
@@ -177,7 +185,7 @@ class FilteringValidationStrategy[TFinding: Finding](
                 if ValidationDecisionEngine.should_keep_finding(item, finding):
                     kept.append(finding)
                 else:
-                    removed.append(finding)
+                    removed.append(RemovedItem(finding=finding, reason=item.reasoning))
 
         return kept, removed, processed_ids
 

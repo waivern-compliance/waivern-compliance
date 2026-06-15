@@ -9,6 +9,11 @@ from waivern_core.schemas import (
     PatternMatchDetail,
 )
 
+from waivern_analysers_shared.llm_validation.models import (
+    LLMValidationOutcome,
+    RemovedItem,
+)
+
 
 def _create_test_finding() -> BaseFindingModel[BaseFindingMetadata]:
     """Create a test finding with auto-generated UUID."""
@@ -17,6 +22,52 @@ def _create_test_finding() -> BaseFindingModel[BaseFindingMetadata]:
         matched_patterns=[PatternMatchDetail(pattern="test_pattern", match_count=1)],
         metadata=BaseFindingMetadata(source="test_source"),
     )
+
+
+class TestLLMValidationOutcome:
+    """Tests for LLMValidationOutcome.with_marked_findings preserving removed items."""
+
+    def test_with_marked_findings_preserves_removed_unchanged(self) -> None:
+        """Marker is applied to kept findings only; removed items pass through untouched.
+
+        The marker callback exists to tag findings that survived LLM
+        validation (e.g., flagging them as 'llm-validated' in the output).
+        Applying it to removed findings would be incoherent — those items are
+        being filtered out, so 'marking' them has no consumer. This test
+        guards that invariant: ``with_marked_findings`` must return the exact
+        same ``RemovedItem`` instances in ``llm_validated_removed``, with
+        their reasons untouched.
+        """
+        kept_finding = _create_test_finding()
+        removed_finding = _create_test_finding()
+        removed_item = RemovedItem(finding=removed_finding, reason="LLM marked as FP")
+        outcome = LLMValidationOutcome[BaseFindingModel[BaseFindingMetadata]](
+            llm_validated_kept=[kept_finding],
+            llm_validated_removed=[removed_item],
+            llm_not_flagged=[],
+            skipped=[],
+        )
+
+        def _mark(
+            f: BaseFindingModel[BaseFindingMetadata],
+        ) -> BaseFindingModel[BaseFindingMetadata]:
+            return f.model_copy(
+                update={"metadata": BaseFindingMetadata(source="MARKED")}
+            )
+
+        marked_outcome = outcome.with_marked_findings(_mark)
+
+        # The marker IS applied to kept findings (sanity check).
+        assert marked_outcome.llm_validated_kept[0].metadata.source == "MARKED"
+
+        # The marker must not touch removed items: reasons stay intact and
+        # the finding's metadata is the original, not the MARKED version.
+        assert marked_outcome.llm_validated_removed == [removed_item]
+        assert marked_outcome.llm_validated_removed[0].reason == "LLM marked as FP"
+        assert (
+            marked_outcome.llm_validated_removed[0].finding.metadata.source
+            == "test_source"
+        )
 
 
 class TestLLMValidationResultModel:
