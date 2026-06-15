@@ -2,20 +2,19 @@
 
 Persisted as a sidecar Message alongside the primary analyser output when LLM
 validation removes findings. Each entry pairs the original finding's
-serialised form with the LLM verdict that drove its removal.
+serialised form with a human-readable reason for its removal.
 """
 
 from datetime import UTC, datetime
 from typing import Annotated, ClassVar
 
 from pydantic import BaseModel, Field, PlainSerializer
-from waivern_core import LLMValidationResultModel
 from waivern_core.schemas import BaseSchemaOutput
 from waivern_core.types import JsonValue
 
 
 class RemovedFinding(BaseModel):
-    """Single finding removed by LLM validation, paired with its verdict.
+    """Single finding removed by LLM validation, paired with its removal reason.
 
     ``original_finding`` is stored as a JSON-serialised dict so that the
     audit-trail schema is decoupled from the producer analyser's specific
@@ -26,8 +25,12 @@ class RemovedFinding(BaseModel):
     original_finding: dict[str, JsonValue] = Field(
         description="Serialised form of the analyser's finding at the time of removal",
     )
-    llm_verdict: LLMValidationResultModel = Field(
-        description="The LLM verdict that caused the finding to be removed",
+    reason: str = Field(
+        description=(
+            "Human-readable removal reason. For LLM-direct removals this is the "
+            "LLM's verdict reasoning verbatim; for group cascade removals it is "
+            "a synthesised 'Inferred — …' string explaining the cascade."
+        ),
     )
     removal_timestamp: Annotated[
         datetime,
@@ -67,7 +70,7 @@ class RemovedFindingsOutput(BaseSchemaOutput):
         description="Version of the ruleset referenced by ``ruleset_name``",
     )
     removed_findings: list[RemovedFinding] = Field(
-        description="Findings removed during LLM validation, each paired with its verdict",
+        description="Findings removed during LLM validation, each paired with its removal reason",
     )
 
 

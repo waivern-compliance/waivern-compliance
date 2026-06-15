@@ -31,57 +31,8 @@
         }
       ]
     },
-    "LLMValidationResultModel": {
-      "description": "Strongly typed model for LLM validation results.\n\nThis model represents a single validation result from the LLM, including\nthe finding ID for explicit matching back to the original finding.\nUsing UUIDs instead of indices makes matching robust against LLM reordering.",
-      "properties": {
-        "finding_id": {
-          "description": "UUID of the finding this result corresponds to (echo back exactly)",
-          "minLength": 1,
-          "title": "Finding Id",
-          "type": "string"
-        },
-        "validation_result": {
-          "default": "TRUE_POSITIVE",
-          "description": "The validation result",
-          "enum": [
-            "TRUE_POSITIVE",
-            "FALSE_POSITIVE"
-          ],
-          "title": "Validation Result",
-          "type": "string"
-        },
-        "confidence": {
-          "default": 0.0,
-          "description": "Confidence score from LLM (0.0-1.0)",
-          "title": "Confidence",
-          "type": "number"
-        },
-        "reasoning": {
-          "default": "No reasoning provided",
-          "description": "Reasoning provided by LLM",
-          "title": "Reasoning",
-          "type": "string"
-        },
-        "recommended_action": {
-          "default": "keep",
-          "description": "Recommended action from LLM",
-          "enum": [
-            "keep",
-            "discard",
-            "flag_for_review"
-          ],
-          "title": "Recommended Action",
-          "type": "string"
-        }
-      },
-      "required": [
-        "finding_id"
-      ],
-      "title": "LLMValidationResultModel",
-      "type": "object"
-    },
     "RemovedFinding": {
-      "description": "Single finding removed by LLM validation, paired with its verdict.\n\n``original_finding`` is stored as a JSON-serialised dict so that the\naudit-trail schema is decoupled from the producer analyser's specific\nfinding type. Migration across analyser-side schema versions is handled\nby pure forward-migration functions at read time.",
+      "description": "Single finding removed by LLM validation, paired with its removal reason.\n\n``original_finding`` is stored as a JSON-serialised dict so that the\naudit-trail schema is decoupled from the producer analyser's specific\nfinding type. Migration across analyser-side schema versions is handled\nby pure forward-migration functions at read time.",
       "properties": {
         "original_finding": {
           "additionalProperties": {
@@ -91,9 +42,10 @@
           "title": "Original Finding",
           "type": "object"
         },
-        "llm_verdict": {
-          "$ref": "#/$defs/LLMValidationResultModel",
-          "description": "The LLM verdict that caused the finding to be removed"
+        "reason": {
+          "description": "Human-readable removal reason. For LLM-direct removals this is the LLM's verdict reasoning verbatim; for group cascade removals it is a synthesised 'Inferred \u2014 \u2026' string explaining the cascade.",
+          "title": "Reason",
+          "type": "string"
         },
         "removal_timestamp": {
           "description": "When this finding was removed",
@@ -103,7 +55,7 @@
       },
       "required": [
         "original_finding",
-        "llm_verdict"
+        "reason"
       ],
       "title": "RemovedFinding",
       "type": "object"
@@ -148,7 +100,7 @@
       "title": "Ruleset Version"
     },
     "removed_findings": {
-      "description": "Findings removed during LLM validation, each paired with its verdict",
+      "description": "Findings removed during LLM validation, each paired with its removal reason",
       "items": {
         "$ref": "#/$defs/RemovedFinding"
       },
