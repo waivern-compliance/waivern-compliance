@@ -328,6 +328,35 @@ class TestFinalise:
         # No findings → no removals → no audit content
         assert sidecars == []
 
+    def test_validation_summary_pre_emits_removed_findings_artifact_id_as_none(
+        self,
+    ) -> None:
+        """When validation ran, ``validation_summary.removed_findings_artifact_id`` is None.
+
+        The analyser pre-emits ``None`` so the key is always present once
+        validation ran; the executor overwrites it with the sidecar's
+        artifact_id when removals produced an audit-trail sidecar.
+        """
+        analyser = _make_analyser()
+        message = _make_standard_input_purpose_message()
+
+        prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
+        assert isinstance(prepare_result.requests[0], LLMRequest)
+        llm_request = cast(
+            LLMRequest[ProcessingPurposeIndicatorModel], prepare_result.requests[0]
+        )
+        sampled = prepare_result.state.orchestrator_state.strategy_findings  # pyright: ignore[reportOptionalMemberAccess]
+        verdicts = {f.id: "TRUE_POSITIVE" for f in sampled}
+        dispatch_result = _build_llm_dispatch_result(llm_request, verdicts)
+
+        finalise_outcome = analyser.finalise(
+            prepare_result.state, [dispatch_result], OUTPUT_SCHEMA
+        )
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
+        validation_summary = result.content["analysis_metadata"]["validation_summary"]
+        assert validation_summary["removed_findings_artifact_id"] is None
+
     def test_llm_result_filters_false_positives_and_marks_kept(self) -> None:
         """LLM TRUE_POSITIVE/FALSE_POSITIVE verdicts → filtering + marker."""
         analyser = _make_analyser()

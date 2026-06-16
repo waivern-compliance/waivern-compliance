@@ -180,6 +180,10 @@ class PersonalDataResultBuilder:
                 "samples_validated": validation_result.samples_validated,
                 "all_succeeded": validation_result.all_succeeded,
                 "skipped_count": len(validation_result.skipped_samples),
+                # Pre-emitted so the key is always present once validation ran;
+                # DAGExecutor stamps the sidecar's artifact_id when removals
+                # produced an audit-trail sidecar.
+                "removed_findings_artifact_id": None,
             }
 
             # Map RemovedGroup to categories_removed for output

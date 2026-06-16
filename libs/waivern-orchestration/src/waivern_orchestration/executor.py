@@ -98,6 +98,8 @@ from waivern_orchestration.utils import get_origin_from_artifact_id
 
 logger = logging.getLogger(__name__)
 
+_REMOVED_FINDINGS_SCHEMA_NAME = "removed_findings"
+
 
 @dataclass
 class _ExecutionContext:
@@ -117,7 +119,8 @@ class _DistributedEntry:
 
     Bundles the processor instance, inputs, and schema so they survive
     across phases. ``prepare_result`` is populated after Phase 1 (or
-    loaded from store on resume).
+    loaded from store on resume); ``finalise_output`` is populated after
+    Phase 3 with the ``(primary, sidecars)`` tuple ready to persist.
 
     """
 
@@ -126,7 +129,25 @@ class _DistributedEntry:
     inputs: list[Message]
     output_schema: Schema
     prepare_result: PrepareResult[Any] | None = None
+    finalise_output: tuple[Message, list[Message]] | None = None
     start_time: float = 0.0
+
+
+@dataclass
+class _ArtifactSaveContext:
+    """Identity bundle applied to a primary and its sidecars during persistence.
+
+    Every Message produced by a single artifact execution (primary + zero
+    or more sidecars) is enriched with the same ``run_id``, ``source``, and
+    ``execution_context`` before saving. This bundle holds that shared
+    identity so it can be passed as a single argument instead of five.
+    """
+
+    artifact_id: str
+    run_id: str
+    source: str
+    execution_context: ExecutionContext
+    store: ArtifactStore
 
 
 class DAGExecutor:
@@ -681,10 +702,9 @@ class DAGExecutor:
                     continue
 
                 if isinstance(result, tuple):
-                    primary, _sidecars = result
+                    entry.finalise_output = result
                     await self._save_distributed_artifact(
                         entry,
-                        primary,
                         results_by_artifact[entry.artifact_id],
                         plan,
                         ctx,
@@ -716,22 +736,47 @@ class DAGExecutor:
     async def _save_distributed_artifact(
         self,
         entry: _DistributedEntry,
-        message: Message,
         results: Sequence[DispatchResult],
         plan: ExecutionPlan,
         ctx: _ExecutionContext,
     ) -> None:
-        """Save a completed distributed artifact with metadata.
+        """Persist a completed distributed artifact and its sidecars.
 
-        Follows the same metadata pattern as ``_produce``: populates
-        ``run_id``, ``source``, and ``extensions`` with ``ExecutionContext``.
-        Calls ``enrich_execution_context`` on each dispatch result to
-        propagate dispatch-specific metadata (e.g., ``model_name``).
+        Reads the ``(primary, sidecars)`` tuple from ``entry.finalise_output``
+        (populated by the caller after Phase 3), builds the persistence
+        identity, persists everything via ``_persist_with_sidecars``, then
+        cleans up: deletes the persisted PrepareResult, marks the artifact
+        completed, and saves state.
+        """
+        if entry.finalise_output is None:
+            msg = f"Cannot save '{entry.artifact_id}': no finalise_output"
+            raise RuntimeError(msg)
+        primary, sidecars = entry.finalise_output
 
+        save_ctx = self._build_save_ctx_for_distributed(entry, results, plan, ctx)
+        await self._persist_with_sidecars(primary, sidecars, save_ctx)
+
+        await ctx.store.delete_prepared(ctx.run_id, entry.artifact_id)
+        ctx.state.mark_completed(entry.artifact_id)
+        await ctx.state.save(ctx.store)
+
+    def _build_save_ctx_for_distributed(
+        self,
+        entry: _DistributedEntry,
+        results: Sequence[DispatchResult],
+        plan: ExecutionPlan,
+        ctx: _ExecutionContext,
+    ) -> _ArtifactSaveContext:
+        """Build the persistence identity for a completed distributed artifact.
+
+        Computes ``source`` from the artifact definition, builds an
+        ``ExecutionContext`` reflecting duration/origin/alias, then lets
+        each dispatch result enrich it (e.g., to propagate ``model_name``).
         """
         definition = plan.runbook.artifacts[entry.artifact_id]
         origin = get_origin_from_artifact_id(entry.artifact_id)
         alias = plan.reversed_aliases.get(entry.artifact_id)
+        source = self._determine_source(definition)
 
         duration = time.monotonic() - entry.start_time
         execution_context = ExecutionContext(
@@ -743,16 +788,84 @@ class DAGExecutor:
         for result in results:
             execution_context = result.enrich_execution_context(execution_context)
 
-        message = replace(
-            message,
+        return _ArtifactSaveContext(
+            artifact_id=entry.artifact_id,
             run_id=ctx.run_id,
-            source=self._determine_source(definition),
-            extensions=MessageExtensions(execution=execution_context),
+            source=source,
+            execution_context=execution_context,
+            store=ctx.store,
         )
-        await ctx.store.save_artifact(ctx.run_id, entry.artifact_id, message)
-        await ctx.store.delete_prepared(ctx.run_id, entry.artifact_id)
-        ctx.state.mark_completed(entry.artifact_id)
-        await ctx.state.save(ctx.store)
+
+    async def _persist_with_sidecars(
+        self,
+        primary: Message,
+        sidecars: list[Message],
+        save_ctx: _ArtifactSaveContext,
+    ) -> Message:
+        """Persist sidecars, stamp the back-reference, then persist the primary.
+
+        Sidecars are persisted **before** the primary so a crash mid-write
+        leaves the artifact in a re-runnable state — on resume the artifact
+        re-runs in full, idempotently overwriting any partial sidecar.
+        Every Message is enriched with the same ``run_id``, ``source``, and
+        ``ExecutionContext`` from ``save_ctx``. Returns the enriched primary
+        so callers needing the persisted form (e.g., ``_produce`` for its
+        ``is_success`` return) don't re-enrich.
+        """
+        for sidecar in sidecars:
+            sidecar_artifact_id = f"{save_ctx.artifact_id}.{sidecar.schema.name}"
+            enriched_sidecar = self._enrich_for_persistence(sidecar, save_ctx)
+            await save_ctx.store.save_artifact(
+                save_ctx.run_id, sidecar_artifact_id, enriched_sidecar
+            )
+
+        self._stamp_back_reference(primary, sidecars, save_ctx.artifact_id)
+
+        enriched_primary = self._enrich_for_persistence(primary, save_ctx)
+        await save_ctx.store.save_artifact(
+            save_ctx.run_id, save_ctx.artifact_id, enriched_primary
+        )
+        return enriched_primary
+
+    @staticmethod
+    def _enrich_for_persistence(
+        message: Message, save_ctx: _ArtifactSaveContext
+    ) -> Message:
+        """Stamp identity (run_id, source, ExecutionContext) onto a Message."""
+        return replace(
+            message,
+            run_id=save_ctx.run_id,
+            source=save_ctx.source,
+            extensions=MessageExtensions(execution=save_ctx.execution_context),
+        )
+
+    def _stamp_back_reference(
+        self,
+        primary: Message,
+        sidecars: list[Message],
+        primary_artifact_id: str,
+    ) -> None:
+        """Stamp the audit-trail sidecar's artifact_id into the primary.
+
+        Mutates ``primary.content["analysis_metadata"]["validation_summary"]``
+        in place when a ``removed_findings`` sidecar is present. No-op when
+        no such sidecar exists, or when the primary lacks the expected
+        nested structure (e.g., a raw passthrough primary). At most one
+        ``removed_findings`` sidecar per primary is expected.
+        """
+        for sidecar in sidecars:
+            if sidecar.schema.name != _REMOVED_FINDINGS_SCHEMA_NAME:
+                continue
+            metadata: object = primary.content.get("analysis_metadata")
+            if not isinstance(metadata, dict):
+                return
+            summary: object = cast("dict[str, Any]", metadata).get("validation_summary")
+            if not isinstance(summary, dict):
+                return
+            cast("dict[str, Any]", summary)["removed_findings_artifact_id"] = (
+                f"{primary_artifact_id}.{sidecar.schema.name}"
+            )
+            return
 
     async def _dispatch_all(
         self,
@@ -974,6 +1087,7 @@ class DAGExecutor:
 
         async with ctx.semaphore:
             try:
+                sidecars: list[Message] = []
                 match definition:
                     case ArtifactDefinition(reuse=ReuseConfig() as reuse):
                         message = await self._reuse_from_previous_run(
@@ -984,29 +1098,27 @@ class DAGExecutor:
                             source, output_schema, ctx.thread_pool
                         )
                     case _:
-                        message = await self._process_from_inputs(
+                        message, sidecars = await self._process_from_inputs(
                             definition, output_schema, ctx
                         )
 
                 # Determine source component type
                 source = self._determine_source(definition)
                 duration = time.monotonic() - start_time
-
-                # Add all metadata to the message before saving
-                message = replace(
-                    message,
+                save_ctx = _ArtifactSaveContext(
+                    artifact_id=artifact_id,
                     run_id=ctx.run_id,
                     source=source,
-                    extensions=MessageExtensions(
-                        execution=ExecutionContext(
-                            status="success",
-                            duration_seconds=duration,
-                            origin=origin,
-                            alias=alias,
-                        )
+                    execution_context=ExecutionContext(
+                        status="success",
+                        duration_seconds=duration,
+                        origin=origin,
+                        alias=alias,
                     ),
+                    store=ctx.store,
                 )
-                await ctx.store.save_artifact(ctx.run_id, artifact_id, message)
+
+                message = await self._persist_with_sidecars(message, sidecars, save_ctx)
 
                 logger.debug(
                     "Artifact %s completed successfully (%.2fs)", artifact_id, duration
@@ -1091,7 +1203,7 @@ class DAGExecutor:
         inputs: list[Message],
         output_schema: Schema,
         thread_pool: ThreadPoolExecutor,
-    ) -> Message:
+    ) -> tuple[Message, list[Message]]:
         """Run a processor in the thread pool.
 
         Args:
@@ -1101,7 +1213,7 @@ class DAGExecutor:
             thread_pool: ThreadPoolExecutor for sync->async bridging.
 
         Returns:
-            Processed message from the processor.
+            ``(primary, sidecars)`` tuple from the processor.
 
         Raises:
             KeyError: If processor type not found in registry.
@@ -1109,10 +1221,9 @@ class DAGExecutor:
         """
         factory = self._registry.processor_factories[process_config.type]
 
-        def sync_process() -> Message:
+        def sync_process() -> tuple[Message, list[Message]]:
             processor = factory.create(process_config.properties)
-            primary, _sidecars = processor.process(inputs, output_schema)
-            return primary
+            return processor.process(inputs, output_schema)
 
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(thread_pool, sync_process)
@@ -1122,7 +1233,7 @@ class DAGExecutor:
         definition: ArtifactDefinition,
         output_schema: Schema,
         ctx: _ExecutionContext,
-    ) -> Message:
+    ) -> tuple[Message, list[Message]]:
         """Produce a derived artifact from its inputs.
 
         Args:
@@ -1131,7 +1242,7 @@ class DAGExecutor:
             ctx: The execution context containing store, run_id, and thread pool.
 
         Returns:
-            The produced message.
+            ``(primary, sidecars)`` — passthrough produces an empty sidecars list.
 
         """
         input_messages = await self._load_inputs(definition, ctx)
@@ -1146,7 +1257,7 @@ class DAGExecutor:
 
         # Passthrough: use first input (or merge for fan-in)
         if len(input_messages) == 1:
-            return input_messages[0]
+            return input_messages[0], []
 
         # Fan-in: merge messages - deferred to Phase 2
         raise NotImplementedError("Fan-in message merge not yet implemented")
