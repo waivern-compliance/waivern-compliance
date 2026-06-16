@@ -669,7 +669,7 @@ class TestInterruptResumeLifecycle:
                 state=StubState(value="batch_state"),
                 requests=[request],
             ),
-            finalise_results=[final_message],
+            finalise_results=[(final_message, [])],
         )
 
         connector_factory = create_mock_connector_factory(
@@ -730,7 +730,7 @@ class TestInterruptResumeLifecycle:
                 state=StubState(value="batch_state"),
                 requests=[request],
             ),
-            finalise_results=[final_message],
+            finalise_results=[(final_message, [])],
         )
         registry.processor_factories["dist_proc"] = (
             create_distributed_processor_factory("dist_proc", processor2)
@@ -782,7 +782,7 @@ class TestInterruptResumeLifecycle:
                 state=StubState(value="batch_state"),
                 requests=[request],
             ),
-            finalise_results=[findings_message],
+            finalise_results=[(findings_message, [])],
         )
 
         connector_factory = create_mock_connector_factory(
@@ -792,7 +792,7 @@ class TestInterruptResumeLifecycle:
             "validator",
             [findings_schema],
             [validated_schema],
-            process_result=validated_message,
+            process_result=(validated_message, []),
         )
 
         artifacts = {
@@ -857,7 +857,7 @@ class TestInterruptResumeLifecycle:
                 state=StubState(value="batch_state"),
                 requests=[request],
             ),
-            finalise_results=[findings_message],
+            finalise_results=[(findings_message, [])],
         )
         registry.processor_factories["dist_proc"] = (
             create_distributed_processor_factory("dist_proc", processor2)

@@ -55,7 +55,7 @@ class TestGDPRPersonalDataClassifierFactory:
             schema=Schema("personal_data_indicator", "1.0.0"),
         )
 
-        result = classifier.process(
+        result, _ = classifier.process(
             [input_message], Schema("gdpr_personal_data", "1.0.0")
         )
 

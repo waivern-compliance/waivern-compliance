@@ -37,6 +37,7 @@ schemas = [
     ('waivern_schemas.security_evidence.v1', 'SecurityEvidenceOutput', 'security_evidence'),
     ('waivern_schemas.security_document_context.v1', 'SecurityDocumentContextOutput', 'security_document_context'),
     ('waivern_schemas.iso27001_assessment.v1', 'ISO27001AssessmentOutput', 'iso27001_assessment'),
+    ('waivern_schemas.removed_findings.v1', 'RemovedFindingsOutput', 'removed_findings'),
 ]
 
 import importlib

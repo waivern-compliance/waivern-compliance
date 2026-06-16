@@ -1,0 +1,107 @@
+{
+  "$defs": {
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "RemovedFinding": {
+      "description": "Single finding removed by LLM validation, paired with its removal reason.\n\n``original_finding`` is stored as a JSON-serialised dict so that the\naudit-trail schema is decoupled from the producer analyser's specific\nfinding type. Migration across analyser-side schema versions is handled\nby pure forward-migration functions at read time.",
+      "properties": {
+        "original_finding": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "description": "Serialised form of the analyser's finding at the time of removal",
+          "title": "Original Finding",
+          "type": "object"
+        },
+        "reason": {
+          "description": "Human-readable removal reason. For LLM-direct removals this is the LLM's verdict reasoning verbatim; for group cascade removals it is a synthesised 'Inferred \u2014 \u2026' string explaining the cascade.",
+          "title": "Reason",
+          "type": "string"
+        },
+        "removal_timestamp": {
+          "description": "When this finding was removed",
+          "title": "Removal Timestamp",
+          "type": "string"
+        }
+      },
+      "required": [
+        "original_finding",
+        "reason"
+      ],
+      "title": "RemovedFinding",
+      "type": "object"
+    }
+  },
+  "description": "Sidecar audit-trail payload listing findings removed by LLM validation.\n\nCarries enough context (analyser identity, run ID, ruleset reference) to\nbe interpreted on its own without reference to the primary output, which\nis required for downstream tooling that aggregates audit data across\nruns.",
+  "properties": {
+    "analyser_name": {
+      "description": "Name of the analyser that produced this audit trail",
+      "title": "Analyser Name",
+      "type": "string"
+    },
+    "run_id": {
+      "description": "Run ID for cross-artifact correlation",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "ruleset": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Ruleset URI used for pattern matching, in the framework's standard ``provider/name/version`` form (e.g. ``local/personal_data_indicator/1.0.0``). ``None`` when the producing analyser is not ruleset-driven.",
+      "title": "Ruleset"
+    },
+    "removed_findings": {
+      "description": "Findings removed during LLM validation, each paired with its removal reason",
+      "items": {
+        "$ref": "#/$defs/RemovedFinding"
+      },
+      "title": "Removed Findings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "analyser_name",
+    "run_id",
+    "removed_findings"
+  ],
+  "title": "RemovedFindingsOutput",
+  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "version": "1.0.0"
+}

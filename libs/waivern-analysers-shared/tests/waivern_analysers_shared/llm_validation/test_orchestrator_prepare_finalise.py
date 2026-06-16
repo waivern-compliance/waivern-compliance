@@ -20,6 +20,7 @@ from waivern_llm import LLMDispatchResult, LLMRequest, SkippedFinding, SkipReaso
 
 from waivern_analysers_shared.llm_validation.models import (
     LLMValidationOutcome,
+    RemovedItem,
     ValidationResult,
 )
 from waivern_analysers_shared.llm_validation.validation_orchestrator import (
@@ -257,13 +258,16 @@ class TestOrchestratorFinalise:
     """Tests for ValidationOrchestrator.finalise()."""
 
     def test_finalise_without_grouping_returns_validation_result(self) -> None:
-        """Ungrouped path -> ValidationResult with correct kept/removed."""
+        """Ungrouped path -> ValidationResult propagates RemovedItem reasons from the strategy outcome."""
         kept = _make_finding("k")
         removed = _make_finding("r")
+        removed_item = RemovedItem(
+            finding=removed, reason="LLM marked as false positive"
+        )
         strategy = _make_finalise_strategy(
             LLMValidationOutcome(
                 llm_validated_kept=[kept],
-                llm_validated_removed=[removed],
+                llm_validated_removed=[removed_item],
                 llm_not_flagged=[],
                 skipped=[],
             )
@@ -279,12 +283,18 @@ class TestOrchestratorFinalise:
 
         assert isinstance(result, ValidationResult)
         assert result.kept_findings == [kept]
-        assert result.removed_findings == [removed]
+        assert result.removed_findings == [removed_item]
+        assert result.removed_findings[0].finding == removed
+        assert result.removed_findings[0].reason == "LLM marked as false positive"
         assert result.removed_groups == []
         assert result.all_succeeded is True
 
     def test_finalise_with_grouping_applies_group_decisions(self) -> None:
-        """Grouped path -> group decisions (Case A/B/C) applied correctly."""
+        """Grouped Case A removes all members; sampled FPs keep LLM reasons, cascade members get 'Inferred —' reasons.
+
+        Case C is implicit: GroupB has no validated FPs, so it contributes
+        nothing to ``removed_findings`` and is fully kept.
+        """
         # GroupA: all samples FALSE_POSITIVE -> whole group removed
         # GroupB: all kept -> whole group kept
         a1 = _make_finding("a1", "GroupA")
@@ -292,10 +302,11 @@ class TestOrchestratorFinalise:
         b1 = _make_finding("b1", "GroupB")
         b2_unsampled = _make_finding("b2", "GroupB")
 
+        a1_removed = RemovedItem(finding=a1, reason="LLM said FP for a1")
         strategy = _make_finalise_strategy(
             LLMValidationOutcome(
                 llm_validated_kept=[b1],
-                llm_validated_removed=[a1],
+                llm_validated_removed=[a1_removed],
                 llm_not_flagged=[],
                 skipped=[],
             )
@@ -317,10 +328,94 @@ class TestOrchestratorFinalise:
 
         assert isinstance(result, ValidationResult)
         # GroupA fully removed; GroupB fully kept
-        assert {f.id for f in result.removed_findings} == {"a1", "a2"}
+        assert {item.finding.id for item in result.removed_findings} == {"a1", "a2"}
         assert {f.id for f in result.kept_findings} == {"b1", "b2"}
         assert len(result.removed_groups) == 1
         assert result.removed_groups[0].concern_value == "GroupA"
+
+        # Reason provenance: sampled FP keeps its LLM-direct reason; cascade
+        # member (a2_unsampled) gets a synthesised 'Inferred —' reason
+        # referencing the concern key and value.
+        by_id = {item.finding.id: item for item in result.removed_findings}
+        assert by_id["a1"].reason == "LLM said FP for a1"
+        assert by_id["a2"].reason.startswith("Inferred —")
+        assert "group='GroupA'" in by_id["a2"].reason
+
+    def test_finalise_case_b_partial_keep_in_same_group(self) -> None:
+        """Case B (mixed kept + FP samples in same group) -> keep group, remove only FP samples with verbatim LLM reasons.
+
+        Case A removes the whole group when all validated samples are
+        FALSE_POSITIVE; Case C keeps the whole group when none are. Case B is
+        the middle ground: some samples in the group are validated as
+        TRUE_POSITIVE and some as FALSE_POSITIVE, so the group survives but
+        the LLM-flagged false positives are filtered out. Non-sampled and
+        skipped members of the group remain kept (conservative semantics —
+        they weren't validated, so we don't infer anything about them).
+        """
+        # One group, two sampled findings (one kept, one removed) plus a
+        # non-sampled member.
+        a1_kept = _make_finding("a1", "GroupA")
+        a2_removed = _make_finding("a2", "GroupA")
+        a3_unsampled = _make_finding("a3", "GroupA")
+
+        a2_removed_item = RemovedItem(finding=a2_removed, reason="LLM said FP for a2")
+        strategy = _make_finalise_strategy(
+            LLMValidationOutcome(
+                llm_validated_kept=[a1_kept],
+                llm_validated_removed=[a2_removed_item],
+                llm_not_flagged=[],
+                skipped=[],
+            )
+        )
+        orchestrator = ValidationOrchestrator(
+            llm_strategy=strategy,
+            grouping_strategy=_GroupingByAttr(),
+        )
+        state = OrchestratorPrepareState(
+            strategy_findings=[a1_kept, a2_removed],
+            config=_make_config(),
+            run_id=_TEST_RUN_ID,
+            groups={"GroupA": [a1_kept, a2_removed, a3_unsampled]},
+            sampled={"GroupA": [a1_kept, a2_removed]},
+            non_sampled={"GroupA": [a3_unsampled]},
+        )
+
+        result = orchestrator.finalise(state, _dispatch_result())
+
+        assert isinstance(result, ValidationResult)
+        # Only the FP sample is removed, with its LLM-direct reason.
+        assert result.removed_findings == [a2_removed_item]
+        # The kept-validated and non-sampled members survive in the group.
+        assert {f.id for f in result.kept_findings} == {"a1", "a3"}
+        # Group was NOT wholesale-removed, so removed_groups stays empty.
+        assert result.removed_groups == []
+
+    def test_finalise_empty_findings_short_circuits_with_no_removed(self) -> None:
+        """Empty state.strategy_findings -> ValidationResult with no removed findings.
+
+        Guards the explicit short-circuit at the top of finalise(); without
+        this guard a downstream change could accidentally invoke the strategy
+        on an empty input and produce a non-empty removed list.
+        """
+        # Strategy is configured but should NEVER be invoked — the empty
+        # short-circuit must fire before any strategy call.
+        strategy = Mock()
+        orchestrator = ValidationOrchestrator(llm_strategy=strategy)
+        state = OrchestratorPrepareState[_Finding](
+            strategy_findings=[],
+            config=_make_config(),
+            run_id=_TEST_RUN_ID,
+        )
+
+        result = orchestrator.finalise(state, _dispatch_result())
+
+        assert isinstance(result, ValidationResult)
+        assert result.removed_findings == []
+        assert result.kept_findings == []
+        assert result.removed_groups == []
+        assert result.samples_validated == 0
+        assert result.all_succeeded is True
+        strategy.finalise_validation.assert_not_called()
 
     def test_finalise_applies_marker(self) -> None:
         """Marker callback applied to validated findings, not skipped."""
@@ -402,19 +497,29 @@ class TestOrchestratorFinaliseFallback:
         assert [f.id for f in returned.state.strategy_findings] == ["o"]
 
     def test_finalise_completes_fallback_round(self) -> None:
-        """Round 2 (is_fallback_round=True) -> merged ValidationResult."""
+        """Round 2 (is_fallback_round=True) -> merged ValidationResult; removed findings from primary and fallback are concatenated with reasons preserved."""
         validated = _make_finding("v")
         oversized = _make_finding("o")
+        primary_removed = _make_finding("pr")
+        fallback_removed = _make_finding("fr")
+
+        primary_removed_item = RemovedItem(
+            finding=primary_removed, reason="primary LLM said FP"
+        )
+        fallback_removed_item = RemovedItem(
+            finding=fallback_removed, reason="fallback LLM said FP"
+        )
         primary_outcome = LLMValidationOutcome(
             llm_validated_kept=[validated],
-            llm_validated_removed=[],
+            llm_validated_removed=[primary_removed_item],
             llm_not_flagged=[],
             skipped=[SkippedFinding(finding=oversized, reason=SkipReason.OVERSIZED)],
         )
-        # Fallback succeeds: oversized now validated as kept
+        # Fallback succeeds: oversized now validated as kept; fallback also
+        # flags its own FP.
         fallback_outcome = LLMValidationOutcome(
             llm_validated_kept=[oversized],
-            llm_validated_removed=[],
+            llm_validated_removed=[fallback_removed_item],
             llm_not_flagged=[],
             skipped=[],
         )
@@ -441,6 +546,13 @@ class TestOrchestratorFinaliseFallback:
         assert result.all_succeeded is True
         fallback_strategy.finalise_validation.assert_called_once()
         primary_strategy.finalise_validation.assert_not_called()
+
+        # Merged outcome concatenates primary + fallback removed items, each
+        # with its origin reason intact.
+        assert result.removed_findings == [
+            primary_removed_item,
+            fallback_removed_item,
+        ]
 
     def test_finalise_no_fallback_when_no_eligible_skipped(self) -> None:
         """Fallback configured but no eligible skipped -> ValidationResult directly."""

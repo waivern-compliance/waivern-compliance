@@ -74,7 +74,7 @@ class TestGDPRPersonalDataClassifier:
         classifier = GDPRPersonalDataClassifier()
 
         # Act
-        result = classifier.process([input_message], output_schema)
+        result, _ = classifier.process([input_message], output_schema)
 
         assert (
             result.content["findings"][0]["privacy_category"] == "identification_data"
@@ -106,7 +106,7 @@ class TestGDPRPersonalDataClassifier:
         )
         classifier = GDPRPersonalDataClassifier()
 
-        result = classifier.process(
+        result, _ = classifier.process(
             [input_message], Schema("gdpr_personal_data", "1.0.0")
         )
 
@@ -138,7 +138,7 @@ class TestGDPRPersonalDataClassifier:
         )
         classifier = GDPRPersonalDataClassifier()
 
-        result = classifier.process(
+        result, _ = classifier.process(
             [input_message], Schema("gdpr_personal_data", "1.0.0")
         )
 
@@ -177,7 +177,7 @@ class TestGDPRPersonalDataClassifier:
         )
         classifier = GDPRPersonalDataClassifier()
 
-        result = classifier.process(
+        result, _ = classifier.process(
             [input_message], Schema("gdpr_personal_data", "1.0.0")
         )
 
@@ -210,7 +210,7 @@ class TestGDPRPersonalDataClassifier:
         )
         classifier = GDPRPersonalDataClassifier()
 
-        result = classifier.process(
+        result, _ = classifier.process(
             [input_message], Schema("gdpr_personal_data", "1.0.0")
         )
 
@@ -250,7 +250,7 @@ class TestGDPRPersonalDataClassifier:
         )
         classifier = GDPRPersonalDataClassifier()
 
-        result = classifier.process(
+        result, _ = classifier.process(
             [input_message], Schema("gdpr_personal_data", "1.0.0")
         )
 
@@ -289,7 +289,7 @@ class TestGDPRPersonalDataClassifier:
         )
         classifier = GDPRPersonalDataClassifier()
 
-        result = classifier.process(
+        result, _ = classifier.process(
             [input_message], Schema("gdpr_personal_data", "1.0.0")
         )
 
@@ -344,7 +344,7 @@ class TestGDPRPersonalDataClassifierErrorHandling:
         classifier = GDPRPersonalDataClassifier()
 
         # Should not crash, provides fallback metadata
-        result = classifier.process(
+        result, _ = classifier.process(
             [input_message], Schema("gdpr_personal_data", "1.0.0")
         )
 
@@ -371,7 +371,7 @@ class TestGDPRPersonalDataClassifierErrorHandling:
         )
         classifier = GDPRPersonalDataClassifier()
 
-        result = classifier.process(
+        result, _ = classifier.process(
             [input_message], Schema("gdpr_personal_data", "1.0.0")
         )
 
@@ -434,7 +434,7 @@ class TestFanInSupport:
 
         classifier = GDPRPersonalDataClassifier()
 
-        result = classifier.process(
+        result, _ = classifier.process(
             [input_1, input_2], Schema("gdpr_personal_data", "1.0.0")
         )
 
@@ -491,7 +491,7 @@ class TestFanInSupport:
 
         classifier = GDPRPersonalDataClassifier()
 
-        result = classifier.process(
+        result, _ = classifier.process(
             [input_1, input_2], Schema("gdpr_personal_data", "1.0.0")
         )
 
@@ -554,7 +554,7 @@ class TestFanInSupport:
 
         classifier = GDPRPersonalDataClassifier()
 
-        result = classifier.process(
+        result, _ = classifier.process(
             [input_1, input_2], Schema("gdpr_personal_data", "1.0.0")
         )
 

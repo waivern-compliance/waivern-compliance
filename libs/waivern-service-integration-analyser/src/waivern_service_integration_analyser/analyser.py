@@ -70,7 +70,7 @@ class ServiceIntegrationAnalyser(Analyser):
         self,
         inputs: list[Message],
         output_schema: Schema,
-    ) -> Message:
+    ) -> tuple[Message, list[Message]]:
         """Process source code to find service integration patterns.
 
         Orchestrates the analysis flow:
@@ -83,7 +83,8 @@ class ServiceIntegrationAnalyser(Analyser):
             output_schema: Expected output schema.
 
         Returns:
-            Output message with service integration findings.
+            ``(primary, [])`` where ``primary`` is the service-integration
+            findings message. No sidecars are emitted.
 
         """
         findings: list[ServiceIntegrationIndicatorModel] = []
@@ -92,7 +93,8 @@ class ServiceIntegrationAnalyser(Analyser):
             source_data = reader.read(message.content)
             findings.extend(self._handler.analyse(source_data))
 
-        return self._result_builder.build_output_message(findings, output_schema)
+        primary = self._result_builder.build_output_message(findings, output_schema)
+        return primary, []
 
     def _load_reader(self, schema: Schema) -> SchemaReader[SourceCodeDataModel]:
         """Dynamically import reader module for the given input schema.

@@ -119,7 +119,7 @@ class TestSecurityControlPolarity:
         analyser = SecurityControlAnalyser(config=_make_config())
         message = _make_message("Using test_positive_auth_pattern for login")
 
-        result = analyser.process([message], OUTPUT_SCHEMA)
+        result, _ = analyser.process([message], OUTPUT_SCHEMA)
 
         findings = result.content["findings"]
         assert len(findings) == 1
@@ -131,7 +131,7 @@ class TestSecurityControlPolarity:
         analyser = SecurityControlAnalyser(config=_make_config())
         message = _make_message("Using test_negative_network_pattern in firewall")
 
-        result = analyser.process([message], OUTPUT_SCHEMA)
+        result, _ = analyser.process([message], OUTPUT_SCHEMA)
 
         findings = result.content["findings"]
         assert len(findings) == 1
@@ -143,7 +143,7 @@ class TestSecurityControlPolarity:
         analyser = SecurityControlAnalyser(config=_make_config())
         message = _make_message("x = a + b")
 
-        result = analyser.process([message], OUTPUT_SCHEMA)
+        result, _ = analyser.process([message], OUTPUT_SCHEMA)
 
         assert result.content["findings"] == []
         assert result.content["summary"]["total_findings"] == 0
@@ -167,7 +167,7 @@ class TestSecurityControlOutputStructure:
         analyser = SecurityControlAnalyser(config=_make_config())
         message = _make_message("Using test_positive_auth_pattern for login")
 
-        result = analyser.process([message], OUTPUT_SCHEMA)
+        result, _ = analyser.process([message], OUTPUT_SCHEMA)
 
         assert isinstance(result, Message)
         assert result.schema == OUTPUT_SCHEMA
@@ -183,7 +183,7 @@ class TestSecurityControlOutputStructure:
             "test_positive_auth_pattern and test_negative_network_pattern"
         )
 
-        result = analyser.process([message], OUTPUT_SCHEMA)
+        result, _ = analyser.process([message], OUTPUT_SCHEMA)
 
         summary = result.content["summary"]
         domain_names = {d["security_domain"] for d in summary["domains"]}
@@ -236,7 +236,7 @@ class TestSecurityControlInputSchemas:
             schema=Schema("source_code", "1.0.0"),
         )
 
-        result = analyser.process([message], OUTPUT_SCHEMA)
+        result, _ = analyser.process([message], OUTPUT_SCHEMA)
 
         assert isinstance(result, Message)
         assert result.schema == OUTPUT_SCHEMA
@@ -264,7 +264,7 @@ class TestSecurityControlFanIn:
         msg_positive = _make_message("Using test_positive_auth_pattern for login")
         msg_negative = _make_message("Using test_negative_network_pattern in firewall")
 
-        result = analyser.process([msg_positive, msg_negative], OUTPUT_SCHEMA)
+        result, _ = analyser.process([msg_positive, msg_negative], OUTPUT_SCHEMA)
 
         findings = result.content["findings"]
         polarities = {f["polarity"] for f in findings}

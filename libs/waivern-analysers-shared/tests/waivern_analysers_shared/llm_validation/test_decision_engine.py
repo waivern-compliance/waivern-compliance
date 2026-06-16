@@ -1,5 +1,6 @@
 """Tests for shared validation decision engine."""
 
+from waivern_core import LLMValidationResultModel, RecommendedActionType
 from waivern_core.schemas import (
     BaseFindingEvidence,
     BaseFindingMetadata,
@@ -7,11 +8,7 @@ from waivern_core.schemas import (
     PatternMatchDetail,
 )
 
-from waivern_analysers_shared.llm_validation import (
-    LLMValidationResultModel,
-    RecommendedActionType,
-    ValidationDecisionEngine,
-)
+from waivern_analysers_shared.llm_validation import ValidationDecisionEngine
 
 
 def _create_test_finding(

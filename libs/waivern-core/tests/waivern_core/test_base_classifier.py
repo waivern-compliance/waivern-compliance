@@ -30,11 +30,16 @@ class GDPRClassifier(Classifier):
         return [Schema("gdpr_classified_finding", "1.0.0")]
 
     @override
-    def process(self, inputs: list[Message], output_schema: Schema) -> Message:
-        return Message(
-            id="test",
-            content={"classified": True},
-            schema=output_schema,
+    def process(
+        self, inputs: list[Message], output_schema: Schema
+    ) -> tuple[Message, list[Message]]:
+        return (
+            Message(
+                id="test",
+                content={"classified": True},
+                schema=output_schema,
+            ),
+            [],
         )
 
 

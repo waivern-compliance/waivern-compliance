@@ -136,7 +136,7 @@ class DataSubjectAnalyser(Analyser):
         state: DataSubjectPrepareState,
         results: Sequence[DispatchResult],
         output_schema: Schema,
-    ) -> Message | PrepareResult[DataSubjectPrepareState]:
+    ) -> tuple[Message, list[Message]] | PrepareResult[DataSubjectPrepareState]:
         """Produce output message from state and dispatch results.
 
         Paths:
@@ -151,11 +151,12 @@ class DataSubjectAnalyser(Analyser):
         retained defensively to satisfy the typed return union.
         """
         if not state.llm_enabled or state.orchestrator_state is None:
-            return self._result_builder.build_output_message(
+            primary = self._result_builder.build_output_message(
                 state.all_findings,
                 output_schema,
                 validation_result=None,
             )
+            return primary, self._result_builder.build_sidecars(None, state.run_id)
 
         llm_result = self._extract_llm_result(results)
         outcome = self._orchestrator.finalise(
@@ -177,11 +178,12 @@ class DataSubjectAnalyser(Analyser):
             f"({len(outcome.removed_groups)} groups removed)"
         )
 
-        return self._result_builder.build_output_message(
+        primary = self._result_builder.build_output_message(
             outcome.kept_findings,
             output_schema,
             validation_result=outcome,
         )
+        return primary, self._result_builder.build_sidecars(outcome, state.run_id)
 
     def deserialise_prepare_result(
         self, raw: dict[str, Any]

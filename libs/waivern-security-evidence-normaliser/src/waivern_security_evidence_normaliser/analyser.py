@@ -502,7 +502,7 @@ class SecurityEvidenceNormaliser(Analyser):
         self,
         inputs: list[Message],
         output_schema: Schema,
-    ) -> Message:
+    ) -> tuple[Message, list[Message]]:
         """Normalise indicator findings into security evidence items.
 
         Dispatches to the appropriate handler based on the input schema name.
@@ -513,7 +513,8 @@ class SecurityEvidenceNormaliser(Analyser):
             output_schema: Expected output schema (security_evidence/1.0.0).
 
         Returns:
-            Output message with normalised security evidence items.
+            ``(primary, [])`` where ``primary`` is the normalised security
+            evidence items message. No sidecars are emitted.
 
         Raises:
             ValueError: If the input schema is not supported.
@@ -541,4 +542,5 @@ class SecurityEvidenceNormaliser(Analyser):
                 )
                 raise ValueError(msg)
 
-        return self._result_builder.build_output_message(findings, output_schema)
+        primary = self._result_builder.build_output_message(findings, output_schema)
+        return primary, []

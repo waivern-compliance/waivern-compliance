@@ -44,6 +44,7 @@ from waivern_analysers_shared.llm_validation.models import (
     FALLBACK_ELIGIBLE_SKIP_REASONS,
     LLMValidationOutcome,
     RemovedGroup,
+    RemovedItem,
     SkippedFinding,
     ValidationResult,
 )
@@ -429,7 +430,9 @@ class ValidationOrchestrator[T: Finding]:
         # Build lookup sets for quick membership testing
         kept_ids = {f.id for f in outcome.llm_validated_kept}
         kept_ids.update(f.id for f in outcome.llm_not_flagged)
-        removed_ids = {f.id for f in outcome.llm_validated_removed}
+        removed_items_by_id = {
+            item.finding.id: item for item in outcome.llm_validated_removed
+        }
         skipped_ids = {s.finding.id for s in outcome.skipped}
 
         # Build mapping from ID to actual findings from outcome
@@ -440,7 +443,7 @@ class ValidationOrchestrator[T: Finding]:
 
         # Accumulators
         all_kept: list[T] = []
-        all_removed: list[T] = []
+        all_removed: list[RemovedItem[T]] = []
         removed_groups: list[RemovedGroup] = []
 
         for group_key, group_findings in groups.items():
@@ -449,13 +452,17 @@ class ValidationOrchestrator[T: Finding]:
 
             # Identify validated samples by category (exclude skipped from decision)
             validated_kept_ids = [f.id for f in group_samples if f.id in kept_ids]
-            validated_removed = [f for f in group_samples if f.id in removed_ids]
+            validated_removed_items = [
+                removed_items_by_id[f.id]
+                for f in group_samples
+                if f.id in removed_items_by_id
+            ]
             group_skipped_ids = [f.id for f in group_samples if f.id in skipped_ids]
 
             # Classify group using decision engine
             decision = ValidationDecisionEngine.classify_group(
                 kept_count=len(validated_kept_ids),
-                removed_count=len(validated_removed),
+                removed_count=len(validated_removed_items),
             )
 
             match decision:
@@ -469,14 +476,32 @@ class ValidationOrchestrator[T: Finding]:
                     # a whole group is false-positive, the skipped members of that
                     # group inherit the group-level judgement. Conservative handling
                     # of skipped findings only applies when the group is NOT removed.
-                    all_removed.extend(group_findings)
+                    #
+                    # Sampled FALSE_POSITIVE members keep their LLM-direct reason;
+                    # all other members (non-sampled, skipped) inherit a synthesised
+                    # cascade reason explaining the inference.
+                    sampled_fp_ids = {
+                        item.finding.id for item in validated_removed_items
+                    }
+                    cascade_reason = (
+                        f"Inferred — all {len(validated_removed_items)} validated samples in "
+                        f"{grouping_strategy.concern_key}='{group_key}' "
+                        "were marked FALSE_POSITIVE by LLM"
+                    )
+                    for finding in group_findings:
+                        if finding.id in sampled_fp_ids:
+                            all_removed.append(removed_items_by_id[finding.id])
+                        else:
+                            all_removed.append(
+                                RemovedItem(finding=finding, reason=cascade_reason)
+                            )
                     removed_groups.append(
                         RemovedGroup(
                             concern_key=grouping_strategy.concern_key,
                             concern_value=group_key,
                             findings_count=len(group_findings),
                             samples_validated=len(validated_kept_ids)
-                            + len(validated_removed),
+                            + len(validated_removed_items),
                             reason="All validated samples were false positives",
                             require_review=True,
                         )
@@ -494,8 +519,8 @@ class ValidationOrchestrator[T: Finding]:
                     all_kept.extend(
                         skipped_findings_by_id[fid] for fid in group_skipped_ids
                     )
-                    # Remove: FALSE_POSITIVE samples
-                    all_removed.extend(validated_removed)
+                    # Remove: FALSE_POSITIVE samples (with their LLM-direct reasons)
+                    all_removed.extend(validated_removed_items)
 
         return ValidationResult(
             kept_findings=all_kept,

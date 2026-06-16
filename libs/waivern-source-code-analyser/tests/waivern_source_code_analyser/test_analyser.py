@@ -121,7 +121,7 @@ class UserManager {
         analyser = SourceCodeAnalyser(config)
 
         # Act
-        result = analyser.process(
+        result, _ = analyser.process(
             [message],
             Schema("source_code", "1.0.0"),
         )
@@ -204,7 +204,7 @@ class UserManager {
         analyser = SourceCodeAnalyser(config)
 
         # Act
-        result = analyser.process(
+        result, _ = analyser.process(
             [message],
             Schema("source_code", "1.0.0"),
         )
@@ -268,7 +268,7 @@ class UserManager {
         analyser = SourceCodeAnalyser(config)
 
         # Act
-        result = analyser.process(
+        result, _ = analyser.process(
             [message],
             Schema("source_code", "1.0.0"),
         )
@@ -313,7 +313,7 @@ class UserManager {
         analyser = SourceCodeAnalyser(config)
 
         # Act
-        result = analyser.process(
+        result, _ = analyser.process(
             [message],
             Schema("source_code", "1.0.0"),
         )
@@ -356,7 +356,7 @@ class UserManager {
         analyser = SourceCodeAnalyser(config)
 
         # Act - should not raise exception
-        result = analyser.process(
+        result, _ = analyser.process(
             [message],
             Schema("source_code", "1.0.0"),
         )
@@ -388,7 +388,7 @@ class UserManager {
         analyser = SourceCodeAnalyser(config)
 
         # Act
-        result = analyser.process(
+        result, _ = analyser.process(
             [message],
             Schema("source_code", "1.0.0"),
         )
@@ -440,7 +440,7 @@ class UserManager {
             analyser = SourceCodeAnalyser(config)
 
             # Act
-            result = analyser.process(
+            result, _ = analyser.process(
                 [message],
                 Schema("source_code", "1.0.0"),
             )
@@ -494,7 +494,7 @@ class UserManager {
         analyser = SourceCodeAnalyser(config)
 
         # Act
-        result = analyser.process(
+        result, _ = analyser.process(
             [message],
             Schema("source_code", "1.0.0"),
         )
@@ -538,7 +538,7 @@ class UserManager {
         analyser = SourceCodeAnalyser(config)
 
         # Act
-        result = analyser.process(
+        result, _ = analyser.process(
             [message],
             Schema("source_code", "1.0.0"),
         )
@@ -608,7 +608,7 @@ class UserManager {
         analyser = SourceCodeAnalyser(config)
 
         # Act
-        result = analyser.process(
+        result, _ = analyser.process(
             [message],
             Schema("source_code", "1.0.0"),
         )
@@ -664,7 +664,7 @@ class UserManager {
         analyser = SourceCodeAnalyser(config)
 
         # Act - should not raise exception
-        result = analyser.process(
+        result, _ = analyser.process(
             [message],
             Schema("source_code", "1.0.0"),
         )
@@ -723,7 +723,7 @@ export default Greeting;
         analyser = SourceCodeAnalyser(config)
 
         # Act
-        result = analyser.process(
+        result, _ = analyser.process(
             [message],
             Schema("source_code", "1.0.0"),
         )

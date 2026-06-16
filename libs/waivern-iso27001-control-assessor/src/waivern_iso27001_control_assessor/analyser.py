@@ -191,7 +191,7 @@ class ISO27001Assessor(Analyser):
         state: ISO27001PrepareState,
         results: Sequence[DispatchResult],
         output_schema: Schema,
-    ) -> Message:
+    ) -> tuple[Message, list[Message]]:
         """Produce assessment verdict from state and dispatch results.
 
         1. Short-circuit paths (insufficient/requires-attestation): emit NOT_ASSESSED.
@@ -202,7 +202,7 @@ class ISO27001Assessor(Analyser):
 
         match state.evidence_status:
             case EvidenceStatus.INSUFFICIENT_EVIDENCE:
-                return self._result_builder.build_output_message(
+                primary = self._result_builder.build_output_message(
                     rule,
                     verdict=AssessmentVerdict(
                         status=ControlStatus.NOT_ASSESSED,
@@ -218,7 +218,7 @@ class ISO27001Assessor(Analyser):
                     output_schema=output_schema,
                 )
             case EvidenceStatus.REQUIRES_ATTESTATION:
-                return self._result_builder.build_output_message(
+                primary = self._result_builder.build_output_message(
                     rule,
                     verdict=AssessmentVerdict(
                         status=ControlStatus.NOT_ASSESSED,
@@ -234,7 +234,9 @@ class ISO27001Assessor(Analyser):
                     output_schema=output_schema,
                 )
             case EvidenceStatus.AUTOMATED:
-                return self._finalise_llm_result(rule, results, output_schema)
+                primary = self._finalise_llm_result(rule, results, output_schema)
+
+        return primary, []
 
     def _finalise_llm_result(
         self,

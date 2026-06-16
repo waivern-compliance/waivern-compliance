@@ -125,7 +125,7 @@ class TestCryptoQualityPolarity:
         analyser = CryptoQualityAnalyser(config=_make_config())
         message = _make_message("Using test_deprecated_pattern for hashing")
 
-        result = analyser.process([message], OUTPUT_SCHEMA)
+        result, _ = analyser.process([message], OUTPUT_SCHEMA)
 
         findings = result.content["findings"]
         assert len(findings) == 1
@@ -138,7 +138,7 @@ class TestCryptoQualityPolarity:
         analyser = CryptoQualityAnalyser(config=_make_config())
         message = _make_message("Using test_strong_pattern for hashing")
 
-        result = analyser.process([message], OUTPUT_SCHEMA)
+        result, _ = analyser.process([message], OUTPUT_SCHEMA)
 
         findings = result.content["findings"]
         assert len(findings) == 1
@@ -151,7 +151,7 @@ class TestCryptoQualityPolarity:
         analyser = CryptoQualityAnalyser(config=_make_config())
         message = _make_message("Using test_weak_pattern for encryption")
 
-        result = analyser.process([message], OUTPUT_SCHEMA)
+        result, _ = analyser.process([message], OUTPUT_SCHEMA)
 
         findings = result.content["findings"]
         assert len(findings) == 1
@@ -164,7 +164,7 @@ class TestCryptoQualityPolarity:
         analyser = CryptoQualityAnalyser(config=_make_config())
         message = _make_message("x = a + b")
 
-        result = analyser.process([message], OUTPUT_SCHEMA)
+        result, _ = analyser.process([message], OUTPUT_SCHEMA)
 
         assert result.content["findings"] == []
         assert result.content["summary"]["total_findings"] == 0
@@ -188,7 +188,7 @@ class TestCryptoQualityOutputStructure:
         analyser = CryptoQualityAnalyser(config=_make_config())
         message = _make_message("Using test_strong_pattern for hashing")
 
-        result = analyser.process([message], OUTPUT_SCHEMA)
+        result, _ = analyser.process([message], OUTPUT_SCHEMA)
 
         assert isinstance(result, Message)
         assert result.schema == OUTPUT_SCHEMA
@@ -202,7 +202,7 @@ class TestCryptoQualityOutputStructure:
         analyser = CryptoQualityAnalyser(config=_make_config())
         message = _make_message("Using test_strong_pattern for hashing")
 
-        result = analyser.process([message], OUTPUT_SCHEMA)
+        result, _ = analyser.process([message], OUTPUT_SCHEMA)
 
         findings = result.content["findings"]
         summary = result.content["summary"]
@@ -228,7 +228,7 @@ class TestCryptoQualityFanIn:
         msg_deprecated = _make_message("Using test_deprecated_pattern for hashing")
         msg_strong = _make_message("Using test_strong_pattern for encryption")
 
-        result = analyser.process([msg_deprecated, msg_strong], OUTPUT_SCHEMA)
+        result, _ = analyser.process([msg_deprecated, msg_strong], OUTPUT_SCHEMA)
 
         findings = result.content["findings"]
         algorithms = {f["algorithm"] for f in findings}

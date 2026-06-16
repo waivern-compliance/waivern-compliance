@@ -136,7 +136,7 @@ class TestGDPRDataCollectionClassification:
         finding = make_indicator_finding("form_data", "http_post")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["gdpr_purpose_category"] == "context_dependent"
@@ -154,7 +154,7 @@ class TestGDPRDataCollectionClassification:
         finding = make_indicator_finding("cookies", "http_cookie")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["gdpr_purpose_category"] == "context_dependent"
@@ -169,7 +169,7 @@ class TestGDPRDataCollectionClassification:
         finding = make_indicator_finding("database_query", "mysql")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["gdpr_purpose_category"] == "context_dependent"
@@ -185,7 +185,7 @@ class TestGDPRDataCollectionClassification:
         finding = make_indicator_finding("unknown_type_xyz", "unknown_source")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["gdpr_purpose_category"] == "unclassified"
@@ -200,7 +200,7 @@ class TestGDPRDataCollectionClassification:
         finding = make_indicator_finding("form_data", "http_post")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["collection_type"] == "form_data"
@@ -229,7 +229,7 @@ class TestSummaryGeneration:
         ]
         input_msg = make_input_message(findings)
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         summary = result.content["summary"]
 
         assert summary["total_findings"] == 3
@@ -247,7 +247,7 @@ class TestSummaryGeneration:
         ]
         input_msg = make_input_message(findings)
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         summary = result.content["summary"]
 
         assert summary["sensitive_purposes_count"] == 0
@@ -264,7 +264,7 @@ class TestSummaryGeneration:
         ]
         input_msg = make_input_message(findings)
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         summary = result.content["summary"]
 
         assert summary["dpia_required_count"] == 0
@@ -281,7 +281,7 @@ class TestSummaryGeneration:
         ]
         input_msg = make_input_message(findings)
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         summary = result.content["summary"]
 
         assert summary["requires_review_count"] == 2
@@ -313,7 +313,7 @@ class TestEdgeCases:
         msg1 = make_input_message([make_indicator_finding("form_data", "http_post")])
         msg2 = make_input_message([make_indicator_finding("cookies", "http_cookie")])
 
-        result = classifier.process([msg1, msg2], output_schema)
+        result, _ = classifier.process([msg1, msg2], output_schema)
 
         assert result.content["summary"]["total_findings"] == 2
 
@@ -332,7 +332,7 @@ class TestEdgeCases:
         }
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         # Should default to "unknown" source when metadata is missing

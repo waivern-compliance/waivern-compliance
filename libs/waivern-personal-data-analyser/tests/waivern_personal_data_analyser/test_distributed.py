@@ -12,15 +12,12 @@ production ruleset data.
 from typing import Any, cast
 
 import pytest
-from waivern_analysers_shared.llm_validation.models import (
-    LLMValidationResponseModel,
-    LLMValidationResultModel,
-)
 from waivern_analysers_shared.llm_validation.validation_orchestrator import (
     OrchestratorPrepareState,
 )
 from waivern_analysers_shared.types import LLMValidationConfig, PatternMatchingConfig
 from waivern_analysers_shared.utilities import RulesetManager
+from waivern_core import LLMValidationResponseModel, LLMValidationResultModel
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_llm.types import BatchingMode, LLMDispatchResult, LLMRequest
@@ -252,12 +249,15 @@ class TestFinalise:
         message = _make_email_phone_message()
 
         prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
-        result = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
-
+        finalise_outcome = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, sidecars = finalise_outcome
         assert isinstance(result, Message)
         assert "validation_summary" not in result.content.get("analysis_metadata", {})
         # Findings preserved without filtering
         assert len(result.content["findings"]) == len(prepare_result.state.all_findings)
+        # LLM never ran → no audit content
+        assert sidecars == []
 
     def test_no_findings_produces_empty_output(self) -> None:
         """Empty findings state → empty output, no validation_summary."""
@@ -265,11 +265,45 @@ class TestFinalise:
         message = _make_no_pattern_message()
 
         prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
-        result = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
-
+        finalise_outcome = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, sidecars = finalise_outcome
         assert isinstance(result, Message)
         assert result.content["findings"] == []
         assert "validation_summary" not in result.content.get("analysis_metadata", {})
+        # No findings → no removals → no audit content
+        assert sidecars == []
+
+    def test_validation_summary_pre_emits_removed_findings_artifact_id_as_none(
+        self,
+    ) -> None:
+        """When validation ran, ``validation_summary.removed_findings_artifact_id`` is None.
+
+        The analyser pre-emits ``None`` so the key is always present once
+        validation ran; the executor overwrites it with the sidecar's
+        artifact_id when removals occurred. Tests the analyser-side half of
+        the audit-trail back-reference contract.
+        """
+        analyser = _make_analyser()
+        message = _make_email_phone_message()
+
+        prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
+        assert isinstance(prepare_result.requests[0], LLMRequest)
+        llm_request = cast(
+            LLMRequest[PersonalDataIndicatorModel], prepare_result.requests[0]
+        )
+        # No removals: every sampled finding TRUE_POSITIVE.
+        sampled = prepare_result.state.orchestrator_state.strategy_findings  # pyright: ignore[reportOptionalMemberAccess]
+        verdicts = {f.id: "TRUE_POSITIVE" for f in sampled}
+        dispatch_result = _build_llm_dispatch_result(llm_request, verdicts)
+
+        finalise_outcome = analyser.finalise(
+            prepare_result.state, [dispatch_result], OUTPUT_SCHEMA
+        )
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
+        validation_summary = result.content["analysis_metadata"]["validation_summary"]
+        assert validation_summary["removed_findings_artifact_id"] is None
 
     def test_llm_result_filters_false_positives_and_marks_kept(self) -> None:
         """LLM TRUE_POSITIVE/FALSE_POSITIVE verdicts → filtering + marking."""
@@ -292,10 +326,11 @@ class TestFinalise:
         }
         dispatch_result = _build_llm_dispatch_result(llm_request, verdicts)
 
-        result = analyser.finalise(
+        finalise_outcome = analyser.finalise(
             prepare_result.state, [dispatch_result], OUTPUT_SCHEMA
         )
-
+        assert isinstance(finalise_outcome, tuple)
+        result, sidecars = finalise_outcome
         assert isinstance(result, Message)
         metadata = result.content["analysis_metadata"]
         assert "validation_summary" in metadata
@@ -312,6 +347,55 @@ class TestFinalise:
             is True
         )
 
+        # FALSE_POSITIVE removal produced an audit-trail sidecar
+        assert len(sidecars) == 1
+        sidecar = sidecars[0]
+        assert sidecar.schema == Schema("removed_findings", "1.0.0")
+        assert sidecar.content["analyser_name"] == "personal_data_analyser"
+        assert sidecar.content["run_id"] == RUN_ID
+        assert sidecar.content["ruleset"] == _UNUSED_RULESET_URI
+        assert len(sidecar.content["removed_findings"]) >= 1
+
+    def test_sidecar_carries_serialised_finding_and_reason(self) -> None:
+        """Each RemovedFinding has matching id and reason verbatim from the LLM verdict.
+
+        Cascade-reason synthesis (``"Inferred — …"`` prefix) is exercised at
+        the orchestrator layer (Step 3); here we only need to confirm that
+        whatever ``reason`` the orchestrator attaches to a ``RemovedItem``
+        reaches the sidecar entry verbatim.
+        """
+        analyser = _make_analyser()
+        message = _make_email_phone_message()
+
+        prepare_result = analyser.prepare(inputs=[message], output_schema=OUTPUT_SCHEMA)
+        assert prepare_result.state.orchestrator_state is not None
+        sampled = prepare_result.state.orchestrator_state.strategy_findings
+
+        # Mark all sampled findings FALSE_POSITIVE → every sample ends up in
+        # removed_findings with the LLM verdict's reasoning attached.
+        assert isinstance(prepare_result.requests[0], LLMRequest)
+        llm_request = cast(
+            LLMRequest[PersonalDataIndicatorModel], prepare_result.requests[0]
+        )
+        verdicts = {f.id: "FALSE_POSITIVE" for f in sampled}
+        dispatch_result = _build_llm_dispatch_result(llm_request, verdicts)
+
+        finalise_outcome = analyser.finalise(
+            prepare_result.state, [dispatch_result], OUTPUT_SCHEMA
+        )
+        assert isinstance(finalise_outcome, tuple)
+        _result, sidecars = finalise_outcome
+        assert len(sidecars) == 1
+        removed = sidecars[0].content["removed_findings"]
+        assert len(removed) >= 1
+
+        sampled_ids = {f.id for f in sampled}
+        for entry in removed:
+            assert entry["original_finding"]["id"] in sampled_ids
+            # LLM-direct reasons preserve the verdict's reasoning verbatim.
+            # _build_llm_dispatch_result attaches "test reasoning" to every result.
+            assert entry["reason"] == "test reasoning"
+
     def test_missing_llm_result_treats_all_as_skipped_with_failure(self) -> None:
         """No LLM result (e.g. dispatcher error) → findings kept, all_succeeded=False."""
         analyser = _make_analyser()
@@ -321,14 +405,17 @@ class TestFinalise:
 
         # Empty results list: the orchestrator treats this as a failed dispatch
         # and all strategy findings are categorised as skipped (BATCH_ERROR).
-        result = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
-
+        finalise_outcome = analyser.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, sidecars = finalise_outcome
         assert isinstance(result, Message)
         metadata = result.content["analysis_metadata"]
         assert metadata["validation_summary"]["all_succeeded"] is False
         assert metadata["validation_summary"]["skipped_count"] > 0
         # Conservative keep: findings preserved
         assert len(result.content["findings"]) >= 1
+        # BATCH_ERROR never reached the LLM → no removals → no audit content
+        assert sidecars == []
 
 
 # =============================================================================

@@ -1,85 +1,32 @@
 """Shared models and constants for LLM validation.
 
-This module defines the result types for the LLM validation layer stack:
+This module defines:
 
-    LLM Response Models     → What the LLM returns (Pydantic for parsing)
     Strategy Results        → What strategies return to orchestrator
     Orchestration Results   → What orchestrator returns to caller
 
+The structured LLM response types (``LLMValidationResultModel``,
+``LLMValidationResponseModel`` and their literal aliases) live in
+``waivern_core.llm_validation_types`` so they can be shared between the LLM
+dispatch layer, the schema layer and this orchestration layer.
 """
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 from waivern_core import Finding
 from waivern_llm import SkippedFinding, SkipReason
 
 __all__ = [
     "FALLBACK_ELIGIBLE_SKIP_REASONS",
     "LLMValidationOutcome",
-    "LLMValidationResponseModel",
-    "LLMValidationResultModel",
-    "RecommendedActionType",
     "RemovedGroup",
+    "RemovedItem",
     "SkippedFinding",
     "SkipReason",
     "ValidationResult",
-    "ValidationResultType",
 ]
-
-
-# =============================================================================
-# Type Aliases and Constants
-# =============================================================================
-
-ValidationResultType = Literal["TRUE_POSITIVE", "FALSE_POSITIVE"]
-RecommendedActionType = Literal["keep", "discard", "flag_for_review"]
-
-
-# =============================================================================
-# LLM Response Models (Pydantic for structured output parsing)
-# =============================================================================
-
-
-class LLMValidationResultModel(BaseModel):
-    """Strongly typed model for LLM validation results.
-
-    This model represents a single validation result from the LLM, including
-    the finding ID for explicit matching back to the original finding.
-    Using UUIDs instead of indices makes matching robust against LLM reordering.
-    """
-
-    finding_id: str = Field(
-        min_length=1,
-        description="UUID of the finding this result corresponds to (echo back exactly)",
-    )
-    validation_result: ValidationResultType = Field(
-        default="TRUE_POSITIVE", description="The validation result"
-    )
-    confidence: float = Field(
-        default=0.0,
-        description="Confidence score from LLM (0.0-1.0)",
-    )
-    reasoning: str = Field(
-        default="No reasoning provided", description="Reasoning provided by LLM"
-    )
-    recommended_action: RecommendedActionType = Field(
-        default="keep", description="Recommended action from LLM"
-    )
-
-
-class LLMValidationResponseModel(BaseModel):
-    """Wrapper model for structured output from LLM validation.
-
-    This model wraps the list of validation results in a single field,
-    which is required for LangChain's with_structured_output() method.
-    """
-
-    results: list[LLMValidationResultModel] = Field(
-        description="List of validation results for each finding"
-    )
 
 
 # Skip reasons eligible for fallback validation
@@ -91,6 +38,35 @@ FALLBACK_ELIGIBLE_SKIP_REASONS: frozenset[SkipReason] = frozenset(
         SkipReason.MISSING_SOURCE,
     }
 )
+
+
+# =============================================================================
+# Shared Result Types (used by both strategy and orchestration layers)
+# =============================================================================
+
+
+class RemovedItem[T: Finding](BaseModel):
+    """A finding removed during LLM validation, paired with its removal reason.
+
+    The strategy layer attaches an LLM verdict's ``reasoning`` verbatim when
+    a finding is directly flagged FALSE_POSITIVE. The orchestrator
+    synthesises an ``"Inferred — …"`` reason when a finding is cascade-removed
+    as part of a whole-group removal (Case A in ``_apply_group_decisions``).
+    Pairing the reason with each finding at the point of removal means no
+    parallel-list invariants for downstream consumers to maintain.
+
+    Implemented as a Pydantic BaseModel so instances can live inside
+    ``LLMValidationOutcome.llm_validated_removed`` and round-trip through
+    ``model_dump(mode="json")`` on the distributed-processor resume path.
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    finding: T
+    """The original finding that was removed."""
+
+    reason: str
+    """Human-readable removal reason — LLM verdict reasoning verbatim, or a synthesised cascade reason."""
 
 
 # =============================================================================
@@ -149,8 +125,12 @@ class ValidationResult[T: Finding]:
     skipped members inherit the group-level judgement.
     """
 
-    removed_findings: list[T]
-    """Individual findings marked FALSE_POSITIVE by LLM."""
+    removed_findings: list[RemovedItem[T]]
+    """Individual findings removed during validation, each paired with its removal reason.
+
+    Includes both LLM-direct removals (reason = verdict reasoning) and
+    group-cascade removals (reason = synthesised ``"Inferred — …"`` string).
+    """
 
     removed_groups: list[RemovedGroup]
     """Groups removed entirely (only when grouping is enabled)."""
@@ -196,8 +176,8 @@ class LLMValidationOutcome[T: Finding](BaseModel):
     llm_validated_kept: list[T]
     """Findings LLM saw and marked as TRUE_POSITIVE."""
 
-    llm_validated_removed: list[T]
-    """Findings LLM saw and marked as FALSE_POSITIVE."""
+    llm_validated_removed: list[RemovedItem[T]]
+    """Findings LLM saw and marked as FALSE_POSITIVE, each paired with the LLM's verdict reasoning."""
 
     llm_not_flagged: list[T]
     """Findings LLM saw but didn't mention (kept via fail-safe)."""
@@ -231,7 +211,9 @@ class LLMValidationOutcome[T: Finding](BaseModel):
 
         Marks both llm_validated_kept and llm_not_flagged since both went
         through LLM validation without being flagged as FALSE_POSITIVE.
-        Skipped findings are NOT marked (never went through LLM).
+        Skipped findings are NOT marked (never went through LLM). Removed
+        items are NOT marker-touched either — marking is for findings that
+        survive into the primary output, and removed items are filtered out.
 
         Args:
             marker: Function that takes a finding and returns a marked copy.

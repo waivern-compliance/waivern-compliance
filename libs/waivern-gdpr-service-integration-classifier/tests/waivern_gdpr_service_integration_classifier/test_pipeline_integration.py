@@ -97,7 +97,7 @@ class TestAnalyserToClassifierPipeline:
         with mocked data wouldn't reveal.
         """
         # Run real analyser
-        indicator_output = analyser.process(
+        indicator_output, _ = analyser.process(
             [source_code_with_service_integrations],
             Schema("service_integration_indicator", "1.0.0"),
         )
@@ -107,7 +107,7 @@ class TestAnalyserToClassifierPipeline:
         assert len(indicator_output.content.get("findings", [])) > 0
 
         # Run real classifier on analyser output
-        gdpr_output = classifier.process(
+        gdpr_output, _ = classifier.process(
             [indicator_output],
             Schema("gdpr_service_integration", "1.0.0"),
         )

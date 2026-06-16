@@ -15,8 +15,11 @@ from waivern_schemas.data_subject_indicator import (
     DataSubjectIndicatorOutput,
     DataSubjectIndicatorSummary,
 )
+from waivern_schemas.removed_findings import RemovedFinding, RemovedFindingsOutput
 
 from .types import DataSubjectAnalyserConfig
+
+_REMOVED_FINDINGS_SCHEMA = Schema("removed_findings", "1.0.0")
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +82,58 @@ class DataSubjectResultBuilder:
 
         return output_message
 
+    def build_sidecars(
+        self,
+        validation_result: ValidationResult[DataSubjectIndicatorModel] | None,
+        run_id: str,
+    ) -> list[Message]:
+        """Build the analyser's sidecar Messages.
+
+        Dispatches to one private builder per sidecar type. Each builder
+        returns ``Message | None`` so this method can filter the absent ones
+        out — a sidecar is "absent" when there is no content to record.
+        Adding a new sidecar type is a new ``_build_X_sidecar`` method plus
+        one line here; the analyser call site does not change.
+        """
+        candidates = [
+            self._build_removed_findings_sidecar(validation_result, run_id),
+        ]
+        return [s for s in candidates if s is not None]
+
+    def _build_removed_findings_sidecar(
+        self,
+        validation_result: ValidationResult[DataSubjectIndicatorModel] | None,
+        run_id: str,
+    ) -> Message | None:
+        """Build the audit-trail sidecar listing LLM-removed findings.
+
+        Returns None when validation was disabled or produced no removals —
+        there is no audit content to record.
+        """
+        if validation_result is None or not validation_result.removed_findings:
+            return None
+
+        payload = RemovedFindingsOutput(
+            analyser_name="data_subject_analyser",
+            run_id=run_id,
+            ruleset=self._config.pattern_matching.ruleset,
+            removed_findings=[
+                RemovedFinding(
+                    original_finding=item.finding.model_dump(mode="json"),
+                    reason=item.reason,
+                )
+                for item in validation_result.removed_findings
+            ],
+        )
+
+        sidecar = Message(
+            id=f"data_subject_removed_findings_{datetime.now(UTC).isoformat()}",
+            content=payload.model_dump(mode="json"),
+            schema=_REMOVED_FINDINGS_SCHEMA,
+        )
+        sidecar.validate()
+        return sidecar
+
     def _build_summary(
         self, indicators: list[DataSubjectIndicatorModel]
     ) -> DataSubjectIndicatorSummary:
@@ -121,6 +176,10 @@ class DataSubjectResultBuilder:
                 "samples_validated": validation_result.samples_validated,
                 "all_succeeded": validation_result.all_succeeded,
                 "skipped_count": len(validation_result.skipped_samples),
+                # Pre-emitted so the key is always present once validation ran;
+                # DAGExecutor stamps the sidecar's artifact_id when removals
+                # produced an audit-trail sidecar.
+                "removed_findings_artifact_id": None,
             }
 
             # Map RemovedGroup to subject_categories_removed for output

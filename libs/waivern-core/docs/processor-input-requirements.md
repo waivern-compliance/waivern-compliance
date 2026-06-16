@@ -221,7 +221,9 @@ artifacts:
 The processor receives both messages and should merge them:
 
 ```python
-def process(self, inputs: list[Message], output_schema: Schema) -> Message:
+def process(
+    self, inputs: list[Message], output_schema: Schema
+) -> tuple[Message, list[Message]]:
     # Merge all items from all inputs
     all_items = []
     for message in inputs:
@@ -231,7 +233,8 @@ def process(self, inputs: list[Message], output_schema: Schema) -> Message:
 
     # Process the combined dataset
     findings = self._analyse(all_items)
-    return self._create_output(findings, output_schema)
+    primary = self._create_output(findings, output_schema)
+    return primary, []
 ```
 
 ### Multi-Schema Routing
@@ -239,7 +242,9 @@ def process(self, inputs: list[Message], output_schema: Schema) -> Message:
 When inputs have different schemas, route to appropriate handlers:
 
 ```python
-def process(self, inputs: list[Message], output_schema: Schema) -> Message:
+def process(
+    self, inputs: list[Message], output_schema: Schema
+) -> tuple[Message, list[Message]]:
     # Determine which schema combination we received
     schemas = frozenset((msg.schema.name, msg.schema.version) for msg in inputs)
 
@@ -248,13 +253,13 @@ def process(self, inputs: list[Message], output_schema: Schema) -> Message:
         ("processing_purpose_finding", "1.0.0"),
         ("gdpr_data_subject", "1.0.0"),
     }:
-        return self._process_full(inputs, output_schema)
+        return self._process_full(inputs, output_schema), []
 
     elif schemas == {
         ("gdpr_personal_data", "1.0.0"),
         ("processing_purpose_finding", "1.0.0"),
     }:
-        return self._process_without_subjects(inputs, output_schema)
+        return self._process_without_subjects(inputs, output_schema), []
 
     else:
         # Should never happen if Planner validated correctly
@@ -302,7 +307,9 @@ def _load_reader(self, schema: Schema) -> ModuleType:
 ### Usage in process()
 
 ```python
-def process(self, inputs: list[Message], output_schema: Schema) -> Message:
+def process(
+    self, inputs: list[Message], output_schema: Schema
+) -> tuple[Message, list[Message]]:
     all_items = []
     for message in inputs:
         reader = self._load_reader(message.schema)
@@ -316,7 +323,8 @@ def process(self, inputs: list[Message], output_schema: Schema) -> Message:
         result = self._analyse_item(item)
         findings.append(result)
 
-    return self._create_output(findings, output_schema)
+    primary = self._create_output(findings, output_schema)
+    return primary, []
 ```
 
 ---
@@ -434,7 +442,9 @@ class PersonalDataAnalyser(Analyser):
         return [Schema("personal_data_indicator", "1.0.0")]
 
     @override
-    def process(self, inputs: list[Message], output_schema: Schema) -> Message:
+    def process(
+        self, inputs: list[Message], output_schema: Schema
+    ) -> tuple[Message, list[Message]]:
         # Merge all inputs (same-schema fan-in)
         all_items = []
         for message in inputs:
@@ -446,7 +456,8 @@ class PersonalDataAnalyser(Analyser):
         for item in all_items:
             findings.extend(self._find_personal_data(item))
 
-        return self._create_output(findings, output_schema)
+        primary = self._create_output(findings, output_schema)
+        return primary, []
 ```
 
 ### Example 2: Multi-Schema Synthesiser
@@ -481,13 +492,15 @@ class GdprArticle30Analyser(Analyser):
         return [Schema("gdpr_article_30_finding", "1.0.0")]
 
     @override
-    def process(self, inputs: list[Message], output_schema: Schema) -> Message:
+    def process(
+        self, inputs: list[Message], output_schema: Schema
+    ) -> tuple[Message, list[Message]]:
         schemas = frozenset((m.schema.name, m.schema.version) for m in inputs)
 
         if len(schemas) == 3:
-            return self._process_full(inputs, output_schema)
+            return self._process_full(inputs, output_schema), []
         else:
-            return self._process_partial(inputs, output_schema)
+            return self._process_partial(inputs, output_schema), []
 
     def _process_full(self, inputs: list[Message], output_schema: Schema) -> Message:
         personal_data = self._extract_by_schema(inputs, "gdpr_personal_data")

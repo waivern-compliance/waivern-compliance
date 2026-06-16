@@ -8,11 +8,11 @@ categorisation is inherited from ``FilteringValidationStrategy``.
 from typing import override
 
 from pydantic import BaseModel
-from waivern_analysers_shared.llm_validation.models import LLMValidationResponseModel
 from waivern_analysers_shared.llm_validation.strategy import (
     FilteringValidationStrategy,
 )
 from waivern_analysers_shared.types import LLMValidationConfig
+from waivern_core import LLMValidationResponseModel
 from waivern_core.types import JsonValue
 from waivern_llm import BatchingMode, ItemGroup, LLMRequest
 from waivern_schemas.processing_purpose_indicator import (

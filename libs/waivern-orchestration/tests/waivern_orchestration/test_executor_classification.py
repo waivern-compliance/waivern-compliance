@@ -73,7 +73,7 @@ class TestDistributedProcessorHappyPath:
                 state=StubState(value="my_state"),
                 requests=[request],
             ),
-            finalise_results=[final_message],
+            finalise_results=[(final_message, [])],
         )
 
         connector_factory = create_mock_connector_factory(
@@ -149,7 +149,7 @@ class TestDistributedProcessorHappyPath:
         dispatch_result = DispatchResult(request_id=request.request_id, name="test_res")
         dist_processor = StubDistributedProcessor(
             prepare_result=PrepareResult(state=StubState(), requests=[request]),
-            finalise_results=[distributed_result_msg],
+            finalise_results=[(distributed_result_msg, [])],
         )
 
         connector_factory = create_mock_connector_factory(
@@ -159,7 +159,7 @@ class TestDistributedProcessorHappyPath:
             "regular_analyser",
             [source_schema],
             [output_schema],
-            process_result=regular_result_msg,
+            process_result=(regular_result_msg, []),
         )
         distributed_factory = create_distributed_processor_factory(
             "distributed_analyser", dist_processor
@@ -245,11 +245,11 @@ class TestDistributedDispatch:
 
         proc_a = StubDistributedProcessor(
             prepare_result=PrepareResult(state=StubState(), requests=[req_a]),
-            finalise_results=[final_message],
+            finalise_results=[(final_message, [])],
         )
         proc_b = StubDistributedProcessor(
             prepare_result=PrepareResult(state=StubState(), requests=[req_b]),
-            finalise_results=[final_message],
+            finalise_results=[(final_message, [])],
         )
 
         connector_factory = create_mock_connector_factory(
@@ -324,7 +324,7 @@ class TestDistributedDispatch:
                 prepare_result: PrepareResult[StubState],
                 final_msg: Message,
             ) -> None:
-                super().__init__(prepare_result, [final_msg])
+                super().__init__(prepare_result, [(final_msg, [])])
                 self.tag = tag
 
             def finalise(self, state, results, output_schema):  # type: ignore[override]
@@ -406,7 +406,7 @@ class TestDistributedDispatch:
                 state=StubState(value="pending_state"),
                 requests=[request],
             ),
-            finalise_results=[create_test_message({}, schema=output_schema)],
+            finalise_results=[(create_test_message({}, schema=output_schema), [])],
         )
 
         connector_factory = create_mock_connector_factory(
@@ -479,14 +479,17 @@ class TestDistributedDispatch:
         request = DispatchRequest(name="failing_req")
         dist_processor = StubDistributedProcessor(
             prepare_result=PrepareResult(state=StubState(), requests=[request]),
-            finalise_results=[create_test_message({}, schema=output_schema)],
+            finalise_results=[(create_test_message({}, schema=output_schema), [])],
         )
 
         connector_factory = create_mock_connector_factory(
             "src", [source_schema], source_message
         )
         regular_factory = create_mock_processor_factory(
-            "regular", [source_schema], [output_schema], process_result=regular_result
+            "regular",
+            [source_schema],
+            [output_schema],
+            process_result=(regular_result, []),
         )
         dispatcher = create_mock_dispatcher(
             [], side_effect=RuntimeError("Dispatch failed")
@@ -549,7 +552,7 @@ class TestDistributedDispatch:
 
         processor = StubDistributedProcessor(
             prepare_result=PrepareResult(state=StubState(), requests=[]),
-            finalise_results=[final_message],
+            finalise_results=[(final_message, [])],
         )
 
         connector_factory = create_mock_connector_factory(
@@ -625,14 +628,17 @@ class TestDistributedErrorIsolation:
 
         failing_processor = FailingPrepareProcessor(
             prepare_result=PrepareResult(state=StubState(), requests=[]),
-            finalise_results=[create_test_message({}, schema=output_schema)],
+            finalise_results=[(create_test_message({}, schema=output_schema), [])],
         )
 
         connector_factory = create_mock_connector_factory(
             "src", [source_schema], source_message
         )
         regular_factory = create_mock_processor_factory(
-            "regular", [source_schema], [output_schema], process_result=regular_result
+            "regular",
+            [source_schema],
+            [output_schema],
+            process_result=(regular_result, []),
         )
 
         artifacts = {
@@ -710,7 +716,7 @@ class TestDistributedResume:
                 state=StubState(value="resume_state"),
                 requests=[request],
             ),
-            finalise_results=[final_message],
+            finalise_results=[(final_message, [])],
         )
 
         connector_factory = create_mock_connector_factory(
@@ -764,7 +770,7 @@ class TestDistributedResume:
                 state=StubState(value="resume_state"),
                 requests=[request],
             ),
-            finalise_results=[final_message],
+            finalise_results=[(final_message, [])],
         )
         processor_factory2 = create_distributed_processor_factory(
             "dist_proc", processor2

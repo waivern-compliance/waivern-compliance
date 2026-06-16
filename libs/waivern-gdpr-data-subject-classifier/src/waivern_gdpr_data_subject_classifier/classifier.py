@@ -212,7 +212,7 @@ class GDPRDataSubjectClassifier(Classifier):
         state: GDPRDataSubjectPrepareState,
         results: Sequence[DispatchResult],
         output_schema: Schema,
-    ) -> Message:
+    ) -> tuple[Message, list[Message]]:
         """Produce output from classified findings and dispatch results.
 
         Paths:
@@ -225,13 +225,14 @@ class GDPRDataSubjectClassifier(Classifier):
         llm_result = self._extract_llm_result(results)
         if not state.llm_enabled or llm_result is None or not llm_result.responses:
             enriched = self._apply_risk_modifiers_via_regex(state.classified_findings)
-            return self._result_builder.build_output_message(
+            primary = self._result_builder.build_output_message(
                 enriched,
                 output_schema,
                 self._ruleset.name,
                 self._ruleset.version,
                 validation_result=None,
             )
+            return primary, []
 
         validation_result = self._aggregate_llm_responses(
             state.classified_findings, llm_result
@@ -239,13 +240,14 @@ class GDPRDataSubjectClassifier(Classifier):
         enriched = self._apply_category_modifiers(
             state.classified_findings, validation_result
         )
-        return self._result_builder.build_output_message(
+        primary = self._result_builder.build_output_message(
             enriched,
             output_schema,
             self._ruleset.name,
             self._ruleset.version,
             validation_result=validation_result,
         )
+        return primary, []
 
     def deserialise_prepare_result(
         self, raw: dict[str, Any]

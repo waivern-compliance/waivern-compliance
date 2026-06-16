@@ -8,9 +8,7 @@ Centralises all decision logic for LLM validation:
 import logging
 from typing import Literal
 
-from waivern_core import Finding
-
-from .models import LLMValidationResultModel
+from waivern_core import Finding, LLMValidationResultModel
 
 logger = logging.getLogger(__name__)
 

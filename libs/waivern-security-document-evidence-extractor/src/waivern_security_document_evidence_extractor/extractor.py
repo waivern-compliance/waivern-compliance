@@ -135,7 +135,7 @@ class SecurityDocumentEvidenceExtractor(Processor):
         state: SecurityDocEvidencePrepareState,
         results: Sequence[DispatchResult],
         output_schema: Schema,
-    ) -> Message:
+    ) -> tuple[Message, list[Message]]:
         """Produce classified document output from state and dispatch results.
 
         1. If LLM result with responses: validate as DomainClassificationResponse.
@@ -146,13 +146,14 @@ class SecurityDocumentEvidenceExtractor(Processor):
         """
         responses, llm_used = self._extract_llm_responses(state, results)
 
-        return build_output_message(
+        primary = build_output_message(
             document_items=state.document_items,
             document_contents=state.document_contents,
             responses=responses,
             output_schema=output_schema,
             llm_classification_enabled=llm_used,
         )
+        return primary, []
 
     def _extract_llm_responses(
         self,

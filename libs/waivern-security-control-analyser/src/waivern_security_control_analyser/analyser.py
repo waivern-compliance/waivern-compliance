@@ -149,7 +149,7 @@ class SecurityControlAnalyser(Analyser):
         self,
         inputs: list[Message],
         output_schema: Schema,
-    ) -> Message:
+    ) -> tuple[Message, list[Message]]:
         """Process source code to find security control patterns.
 
         Supports same-schema fan-in: multiple source_code or standard_input
@@ -161,9 +161,11 @@ class SecurityControlAnalyser(Analyser):
             output_schema: Expected output schema.
 
         Returns:
-            Output message with security evidence findings from all inputs combined.
+            ``(primary, [])`` where ``primary`` is the security-evidence
+            findings message from all inputs combined. No sidecars are emitted.
 
         """
         data_items = self._merge_input_data_items(inputs)
         findings = self._find_patterns_in_data_items(data_items)
-        return self._result_builder.build_output_message(findings, output_schema)
+        primary = self._result_builder.build_output_message(findings, output_schema)
+        return primary, []

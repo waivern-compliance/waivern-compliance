@@ -57,7 +57,7 @@ def create_mock_processor_factory(
     name: str,
     input_schemas: list[Schema],
     output_schemas: list[Schema],
-    process_result: Message | None = None,
+    process_result: tuple[Message, list[Message]] | None = None,
     input_requirements: list[list[Schema]] | None = None,
 ) -> MagicMock:
     """Create a mock processor factory.
@@ -67,8 +67,8 @@ def create_mock_processor_factory(
         input_schemas: List of input schemas the processor accepts.
             Each schema becomes a separate single-item alternative.
         output_schemas: List of output schemas the processor produces.
-        process_result: Optional message to return from process().
-            If provided, creates a mock processor that returns this message.
+        process_result: Optional ``(primary, sidecars)`` tuple to return from
+            process(). If provided, creates a mock processor that returns it.
         input_requirements: Optional explicit input requirement combinations.
             Each inner list is one valid combination of schema types.
             If provided, overrides the default conversion from input_schemas.
@@ -311,7 +311,9 @@ class StubDistributedProcessor:
     def __init__(
         self,
         prepare_result: PrepareResult[StubState],
-        finalise_results: Sequence[Message | PrepareResult[StubState]],
+        finalise_results: Sequence[
+            tuple[Message, list[Message]] | PrepareResult[StubState]
+        ],
     ) -> None:
         self.prepare_result = prepare_result
         self.finalise_results = list(finalise_results)
@@ -335,7 +337,7 @@ class StubDistributedProcessor:
         state: StubState,
         results: Sequence[DispatchResult],
         output_schema: Schema,
-    ) -> Message | PrepareResult[StubState]:
+    ) -> tuple[Message, list[Message]] | PrepareResult[StubState]:
         self.call_log.append("finalise")
         idx = min(self._finalise_call_count, len(self.finalise_results) - 1)
         self._finalise_call_count += 1

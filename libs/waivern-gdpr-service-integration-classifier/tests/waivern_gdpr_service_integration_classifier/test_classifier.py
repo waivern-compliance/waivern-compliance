@@ -141,7 +141,7 @@ class TestGDPRServiceIntegrationClassification:
         finding = make_indicator_finding("cloud_infrastructure", "operational")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["gdpr_purpose_category"] == "operational"
@@ -160,7 +160,7 @@ class TestGDPRServiceIntegrationClassification:
         finding = make_indicator_finding("user_analytics", "analytics")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["gdpr_purpose_category"] == "analytics"
@@ -177,7 +177,7 @@ class TestGDPRServiceIntegrationClassification:
         finding = make_indicator_finding("ai_ml_services", "data_processing")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["gdpr_purpose_category"] == "ai_and_ml"
@@ -193,7 +193,7 @@ class TestGDPRServiceIntegrationClassification:
         finding = make_indicator_finding("healthcare_integrations", "operational")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["gdpr_purpose_category"] == "healthcare"
@@ -210,7 +210,7 @@ class TestGDPRServiceIntegrationClassification:
         finding = make_indicator_finding("communication", "operational")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["gdpr_purpose_category"] == "context_dependent"
@@ -225,7 +225,7 @@ class TestGDPRServiceIntegrationClassification:
         finding = make_indicator_finding("unknown_service_xyz", "operational")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["gdpr_purpose_category"] == "unclassified"
@@ -244,7 +244,7 @@ class TestGDPRServiceIntegrationClassification:
         finding = make_indicator_finding("communication", "operational")
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         assert classified["service_category"] == "communication"
@@ -275,7 +275,7 @@ class TestSummaryGeneration:
         ]
         input_msg = make_input_message(findings)
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         summary = result.content["summary"]
 
         assert summary["total_findings"] == 3
@@ -298,7 +298,7 @@ class TestSummaryGeneration:
         ]
         input_msg = make_input_message(findings)
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         summary = result.content["summary"]
 
         assert summary["sensitive_purposes_count"] == 2
@@ -318,7 +318,7 @@ class TestSummaryGeneration:
         ]
         input_msg = make_input_message(findings)
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         summary = result.content["summary"]
 
         assert summary["dpia_required_count"] == 1
@@ -337,7 +337,7 @@ class TestSummaryGeneration:
         ]
         input_msg = make_input_message(findings)
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         summary = result.content["summary"]
 
         assert summary["requires_review_count"] == 1
@@ -373,7 +373,7 @@ class TestEdgeCases:
             [make_indicator_finding("cloud_infrastructure", "operational")]
         )
 
-        result = classifier.process([msg1, msg2], output_schema)
+        result, _ = classifier.process([msg1, msg2], output_schema)
 
         assert result.content["summary"]["total_findings"] == 2
 
@@ -392,7 +392,7 @@ class TestEdgeCases:
         }
         input_msg = make_input_message([finding])
 
-        result = classifier.process([input_msg], output_schema)
+        result, _ = classifier.process([input_msg], output_schema)
         classified = result.content["findings"][0]
 
         # Should default to "unknown" source when metadata is missing
