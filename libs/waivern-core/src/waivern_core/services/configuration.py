@@ -64,8 +64,11 @@ class BaseServiceConfiguration(BaseModel):
         objects from properties dictionaries (e.g., from runbook properties,
         environment variables, or JSON).
 
-        Subclasses should override this method to add environment variable
-        support and other preprocessing logic.
+        Subclasses override this method to assemble the validated config from raw
+        inputs — overlaying environment variables is one common case, but assembly
+        also covers dispatching on a field (e.g. ``LLMServiceConfiguration`` loads
+        provider-specific keys and models), layered fallbacks, and post-validation
+        enrichment.
 
         Args:
             properties: Dictionary containing configuration properties
@@ -85,6 +88,17 @@ class BaseServiceConfiguration(BaseModel):
             ```
 
         """
+        # AI-DEV-NOTE: from_properties() is a per-component config-ASSEMBLY seam,
+        # not an env-var workaround. Env-var overlay is its most common use today,
+        # not the reason it exists — subclasses also dispatch on a field (e.g.
+        # LLMServiceConfiguration on `provider`), apply layered fallbacks, resolve
+        # secrets, and enrich fields after validation. Consequences for anyone
+        # changing this: (1) do NOT assume declarative env loading (pydantic-settings)
+        # would make these overrides deletable; (2) do NOT hoist error-translation
+        # into this base class — assembly is component-specific and stays in each
+        # subclass, so each owns its own error contract. When reasoning about WHY this
+        # seam exists, read the hardest subclass, not the simplest (which is mostly
+        # env-merge and misleads you into thinking the seam is removable).
         return cls.model_validate(properties)
 
 
@@ -142,8 +156,11 @@ class BaseComponentConfiguration(BaseModel):
         This factory method provides a consistent way to create configuration
         objects from properties dictionaries (typically from runbook YAML properties).
 
-        Subclasses should override this method to add environment variable
-        support, defaults, or other preprocessing logic specific to the component.
+        Subclasses override this method to assemble the validated config from raw
+        inputs — overlaying environment variables is one common case, but assembly
+        also covers dispatching on a field (e.g. ``GitHubConnectorConfig`` branches
+        on ``auth_method``), resolving secrets, reading the filesystem, and enriching
+        frozen fields after validation.
 
         Args:
             properties: Dictionary containing configuration properties from runbook
@@ -163,4 +180,16 @@ class BaseComponentConfiguration(BaseModel):
             ```
 
         """
+        # AI-DEV-NOTE: from_properties() is a per-component config-ASSEMBLY seam,
+        # not an env-var workaround. Env-var overlay is its most common use today,
+        # not the reason it exists — subclasses also dispatch on a field (e.g.
+        # GitHubConnectorConfig on `auth_method`), resolve secrets, read the
+        # filesystem, and enrich frozen fields after validation. Consequences for
+        # anyone changing this: (1) do NOT assume declarative env loading
+        # (pydantic-settings) would make these overrides deletable; (2) do NOT hoist
+        # error-translation into this base class — assembly is component-specific and
+        # stays in each subclass, so each owns its own error contract. When reasoning
+        # about WHY this seam exists, read the hardest subclass, not the simplest
+        # (which is mostly env-merge and misleads you into thinking the seam is
+        # removable).
         return cls.model_validate(properties)
