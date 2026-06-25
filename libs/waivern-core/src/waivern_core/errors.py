@@ -5,7 +5,7 @@ This module provides:
 - PendingProcessingError: Marker for async processing pending (batch APIs)
 - ConnectorError, ConnectorConfigError, ConnectorExtractionError: Connector exceptions
 - ProcessorError: Base exception for processor-related errors
-- AnalyserError, AnalyserConfigError, AnalyserInputError, AnalyserProcessingError: Analyser exceptions
+- AnalyserError, AnalyserInputError, AnalyserProcessingError: Analyser exceptions
 - ServiceConfigError: Raised when service configuration is invalid
 - ParserError: Parser-related exception
 - MessageValidationError: Message validation exception
@@ -74,12 +74,6 @@ class ProcessorProcessingError(ProcessorError):
 # Analyser-specific errors (extend ProcessorError for backwards compatibility)
 class AnalyserError(ProcessorError):
     """Base exception for analyser-related errors."""
-
-    pass
-
-
-class AnalyserConfigError(AnalyserError):
-    """Raised when analyser configuration is invalid."""
 
     pass
 

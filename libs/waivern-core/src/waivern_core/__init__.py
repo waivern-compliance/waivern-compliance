@@ -23,7 +23,6 @@ from waivern_core.dispatch import (
     RequestDispatcher,
 )
 from waivern_core.errors import (
-    AnalyserConfigError,
     AnalyserError,
     AnalyserInputError,
     AnalyserProcessingError,
@@ -137,7 +136,6 @@ __all__ = [
     "validate_output_schema",
     # Errors
     "WaivernError",
-    "AnalyserConfigError",
     "AnalyserError",
     "AnalyserInputError",
     "AnalyserProcessingError",

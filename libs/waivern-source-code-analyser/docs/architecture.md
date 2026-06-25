@@ -220,7 +220,7 @@ The analyser implements graceful degradation:
 | ---------------------------- | ---------------------------------------- |
 | File exceeds `max_file_size` | Skipped with warning, analysis continues |
 | Unsupported file extension   | Skipped, no error                        |
-| Invalid configuration        | `AnalyserConfigError` raised at startup  |
+| Invalid configuration        | `ProcessorConfigError` raised at startup |
 
 ## Configuration
 
