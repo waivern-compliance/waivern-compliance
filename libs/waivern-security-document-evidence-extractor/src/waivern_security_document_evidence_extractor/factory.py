@@ -34,9 +34,6 @@ class SecurityDocumentEvidenceExtractorFactory(
     @override
     def create(self, config: ComponentConfig) -> SecurityDocumentEvidenceExtractor:
         """Create a SecurityDocumentEvidenceExtractor from configuration."""
-        if not self.can_create(config):
-            raise ValueError("Cannot create extractor with given configuration")
-
         return SecurityDocumentEvidenceExtractor(
             config=SecurityDocumentEvidenceExtractorConfig.from_properties(config),
         )

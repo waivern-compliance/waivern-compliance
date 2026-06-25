@@ -2,6 +2,7 @@
 
 import pytest
 from waivern_core import ComponentConfig, ComponentFactory
+from waivern_core.errors import ProcessorConfigError
 from waivern_core.services import ServiceContainer
 from waivern_core.testing import AnalyserContractTests, ComponentFactoryContractTests
 
@@ -45,3 +46,12 @@ class TestISO27001AssessorFactory:
         result = factory.can_create({"domain_ruleset": "local/iso27001_domains/1.0.0"})
 
         assert result is False
+
+    def test_create_raises_processor_config_error_for_invalid_config(self) -> None:
+        """create() surfaces the translated config error, not a generic ValueError."""
+        factory = ISO27001AssessorFactory(ServiceContainer())
+
+        with pytest.raises(
+            ProcessorConfigError, match="Invalid ISO27001AssessorConfig"
+        ):
+            factory.create({"unknown_field": "value"})

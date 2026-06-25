@@ -7,8 +7,12 @@ from waivern_core import AnalyserContractTests
 from waivern_core.errors import ProcessorConfigError
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
+from waivern_core.services import ServiceContainer
 
 from waivern_security_evidence_normaliser.analyser import SecurityEvidenceNormaliser
+from waivern_security_evidence_normaliser.factory import (
+    SecurityEvidenceNormaliserFactory,
+)
 from waivern_security_evidence_normaliser.types import SecurityEvidenceNormaliserConfig
 
 # =============================================================================
@@ -25,6 +29,19 @@ class TestSecurityEvidenceNormaliserConfig:
             SecurityEvidenceNormaliserConfig.from_properties(
                 {"maximum_evidence_items": 0}
             )
+
+
+class TestSecurityEvidenceNormaliserFactory:
+    """Factory surfaces translated config errors from create()."""
+
+    def test_create_raises_processor_config_error_for_invalid_config(self) -> None:
+        """create() surfaces the translated config error, not a generic ValueError."""
+        factory = SecurityEvidenceNormaliserFactory(ServiceContainer())
+
+        with pytest.raises(
+            ProcessorConfigError, match="Invalid SecurityEvidenceNormaliserConfig"
+        ):
+            factory.create({"maximum_evidence_items": 0})
 
 
 class TestSecurityEvidenceNormaliserContract(

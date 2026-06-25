@@ -41,12 +41,9 @@ class PersonalDataAnalyserFactory(ComponentFactory[PersonalDataAnalyser]):
             Configured PersonalDataAnalyser instance.
 
         Raises:
-            ValueError: If configuration is invalid.
+            ProcessorConfigError: If the configuration is invalid.
 
         """
-        if not self.can_create(config):
-            raise ValueError("Cannot create analyser with given configuration")
-
         return PersonalDataAnalyser(
             config=PersonalDataAnalyserConfig.from_properties(config),
         )

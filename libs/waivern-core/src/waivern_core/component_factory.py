@@ -95,6 +95,13 @@ class ComponentFactory[T](ABC):
         with execution-specific configuration. The factory injects any required
         infrastructure services (LLM, database, cache) into the component.
 
+        ``create()`` must let the config's translated error propagate. Do NOT gate it
+        on ``can_create()`` (e.g. ``if not self.can_create(config): raise
+        ValueError(...)``): that collapses the precise category error into a generic
+        one and hides the validation detail from the caller. ``can_create()`` is the
+        boolean shadow for graceful degradation; ``create()`` is the path that
+        surfaces *why* a configuration is invalid.
+
         Args:
             config: Configuration dict from runbook properties.
                    Factory validates and converts to typed config internally.
@@ -103,8 +110,9 @@ class ComponentFactory[T](ABC):
             Configured component instance ready for execution.
 
         Raises:
-            ValueError: If configuration is invalid or missing required fields
-            RuntimeError: If component creation fails (e.g., service unavailable)
+            ConnectorConfigError | ProcessorConfigError: If the configuration is
+                invalid (connectors raise the former, processors the latter).
+            RuntimeError: If component creation fails (e.g., service unavailable).
 
         Example:
             >>> factory = PersonalDataAnalyserFactory(container)
@@ -150,8 +158,12 @@ class ComponentFactory[T](ABC):
         - Remote service health (for SaaS wrappers)
         - Any other prerequisites for component creation
 
-        This is called by the executor before attempting to create the component,
-        allowing graceful degradation when services are unavailable.
+        This is the non-constructing boolean shadow of ``create()``'s preconditions:
+        it reports yes/no only and MUST NOT build the component (a connector may open
+        a socket or database connection in ``__init__``), so it cannot be defined as
+        "try ``create()``". Implement it as ``try: <checks>; return True`` /
+        ``except Exception: return False`` over the same preconditions ``create()``
+        requires, allowing the caller to degrade gracefully when they do not hold.
 
         Args:
             config: Configuration to validate (from runbook properties)

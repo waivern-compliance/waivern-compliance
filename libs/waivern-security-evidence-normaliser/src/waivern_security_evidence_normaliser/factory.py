@@ -40,12 +40,9 @@ class SecurityEvidenceNormaliserFactory(ComponentFactory[SecurityEvidenceNormali
             Configured SecurityEvidenceNormaliser instance
 
         Raises:
-            ValueError: If configuration is invalid or ruleset cannot be loaded
+            ProcessorConfigError: If the configuration is invalid
 
         """
-        if not self.can_create(config):
-            raise ValueError("Cannot create analyser with given configuration")
-
         analyser_config = SecurityEvidenceNormaliserConfig.from_properties(config)
         return SecurityEvidenceNormaliser(config=analyser_config)
 
