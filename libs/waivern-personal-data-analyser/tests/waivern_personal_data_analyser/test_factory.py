@@ -15,6 +15,7 @@ from waivern_core import (
     ComponentFactory,
     ComponentFactoryContractTests,
 )
+from waivern_core.errors import ProcessorConfigError
 from waivern_core.services import ServiceContainer
 from waivern_rulesets import AbstractRuleset
 from waivern_rulesets.personal_data_indicator import PersonalDataIndicatorRule
@@ -95,3 +96,12 @@ class TestPersonalDataAnalyserFactory(
         }
 
         assert factory.can_create(config_with_nonexistent_ruleset) is False
+
+    def test_create_raises_processor_config_error_for_invalid_config(self) -> None:
+        """create() surfaces the translated config error, not a generic ValueError."""
+        factory = PersonalDataAnalyserFactory(ServiceContainer())
+
+        with pytest.raises(
+            ProcessorConfigError, match="Invalid PersonalDataAnalyserConfig"
+        ):
+            factory.create({"unknown_field": "value"})

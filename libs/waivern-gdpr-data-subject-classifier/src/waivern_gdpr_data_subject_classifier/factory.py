@@ -30,9 +30,6 @@ class GDPRDataSubjectClassifierFactory(ComponentFactory[GDPRDataSubjectClassifie
     @override
     def create(self, config: ComponentConfig) -> GDPRDataSubjectClassifier:
         """Create a GDPRDataSubjectClassifier from configuration."""
-        if not self.can_create(config):
-            raise ValueError("Cannot create classifier with given configuration")
-
         return GDPRDataSubjectClassifier(
             config=GDPRDataSubjectClassifierConfig.from_properties(config),
         )

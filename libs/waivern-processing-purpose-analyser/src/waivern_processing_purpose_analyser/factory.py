@@ -30,9 +30,6 @@ class ProcessingPurposeAnalyserFactory(ComponentFactory[ProcessingPurposeAnalyse
     @override
     def create(self, config: ComponentConfig) -> ProcessingPurposeAnalyser:
         """Create a ProcessingPurposeAnalyser from configuration."""
-        if not self.can_create(config):
-            raise ValueError("Cannot create analyser with given configuration")
-
         return ProcessingPurposeAnalyser(
             config=ProcessingPurposeAnalyserConfig.from_properties(config),
         )

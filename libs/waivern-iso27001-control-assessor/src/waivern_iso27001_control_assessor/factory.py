@@ -30,9 +30,6 @@ class ISO27001AssessorFactory(ComponentFactory[ISO27001Assessor]):
     @override
     def create(self, config: ComponentConfig) -> ISO27001Assessor:
         """Create an ISO27001Assessor from configuration."""
-        if not self.can_create(config):
-            raise ValueError("Cannot create assessor with given configuration")
-
         return ISO27001Assessor(
             config=ISO27001AssessorConfig.from_properties(config),
         )

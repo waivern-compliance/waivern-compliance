@@ -6,6 +6,7 @@ from waivern_core import (
     ComponentFactory,
     ComponentFactoryContractTests,
 )
+from waivern_core.errors import ProcessorConfigError
 from waivern_core.services import ServiceContainer
 
 from waivern_gdpr_data_subject_classifier import GDPRDataSubjectClassifier
@@ -39,3 +40,12 @@ class TestGDPRDataSubjectClassifierFactory(
         assert (
             factory.can_create({"ruleset": "local/nonexistent_ruleset/1.0.0"}) is False
         )
+
+    def test_create_raises_processor_config_error_for_invalid_config(self) -> None:
+        """create() surfaces the translated config error, not a generic ValueError."""
+        factory = GDPRDataSubjectClassifierFactory(ServiceContainer())
+
+        with pytest.raises(
+            ProcessorConfigError, match="Invalid GDPRDataSubjectClassifierConfig"
+        ):
+            factory.create({"unknown_field": "value"})

@@ -2,6 +2,7 @@
 
 import pytest
 from waivern_core import AnalyserContractTests
+from waivern_core.errors import ProcessorConfigError
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 from waivern_core.services import ServiceContainer
@@ -458,3 +459,13 @@ class TestServiceIntegrationFactory:
             "pattern_matching": {"ruleset": "local/nonexistent/1.0.0"},
         }
         assert factory.can_create(properties) is False
+
+    def test_create_raises_processor_config_error_for_invalid_config(self) -> None:
+        """create() surfaces the translated config error, not a generic ValueError."""
+        container = ServiceContainer()
+        factory = ServiceIntegrationAnalyserFactory(container)
+
+        with pytest.raises(
+            ProcessorConfigError, match="Invalid ServiceIntegrationAnalyserConfig"
+        ):
+            factory.create({"unknown_field": "value"})

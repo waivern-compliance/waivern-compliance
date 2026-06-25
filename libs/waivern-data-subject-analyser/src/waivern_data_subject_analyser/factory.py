@@ -30,9 +30,6 @@ class DataSubjectAnalyserFactory(ComponentFactory[DataSubjectAnalyser]):
     @override
     def create(self, config: ComponentConfig) -> DataSubjectAnalyser:
         """Create a DataSubjectAnalyser from configuration."""
-        if not self.can_create(config):
-            raise ValueError("Cannot create analyser with given configuration")
-
         return DataSubjectAnalyser(
             config=DataSubjectAnalyserConfig.from_properties(config),
         )

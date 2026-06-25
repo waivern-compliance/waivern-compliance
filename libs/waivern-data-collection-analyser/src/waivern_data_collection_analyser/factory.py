@@ -37,12 +37,9 @@ class DataCollectionAnalyserFactory(ComponentFactory[DataCollectionAnalyser]):
             Configured DataCollectionAnalyser instance.
 
         Raises:
-            ValueError: If configuration is invalid or ruleset cannot be loaded.
+            ProcessorConfigError: If the configuration is invalid.
 
         """
-        if not self.can_create(config):
-            raise ValueError("Cannot create analyser with given configuration")
-
         analyser_config = DataCollectionAnalyserConfig.from_properties(config)
         return DataCollectionAnalyser(config=analyser_config)
 
