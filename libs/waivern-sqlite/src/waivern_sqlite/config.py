@@ -3,8 +3,9 @@
 import os
 from typing import Any, Self, override
 
-from pydantic import Field, ValidationError, field_validator
+from pydantic import Field, field_validator
 from waivern_core import BaseComponentConfiguration
+from waivern_core.config_validation import validate_or_raise
 from waivern_core.errors import ConnectorConfigError
 
 
@@ -48,17 +49,12 @@ class SQLiteConnectorConfig(BaseComponentConfiguration):
             ConnectorConfigError: If validation fails or required properties are missing
 
         """
-        try:
-            # Environment variables take precedence
-            database_path = os.getenv(
+        # Environment variables take precedence
+        config_data = {
+            "database_path": os.getenv(
                 "SQLITE_DATABASE_PATH", properties.get("database_path", "")
-            )
-            max_rows_per_table = int(properties.get("max_rows_per_table", 10))
+            ),
+            "max_rows_per_table": properties.get("max_rows_per_table", 10),
+        }
 
-            return cls(
-                database_path=database_path,
-                max_rows_per_table=max_rows_per_table,
-            )
-
-        except (ValueError, TypeError, ValidationError) as e:
-            raise ConnectorConfigError(f"SQLite configuration error: {e}") from e
+        return validate_or_raise(cls, config_data, ConnectorConfigError)

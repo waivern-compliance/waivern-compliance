@@ -5,6 +5,7 @@ from typing import Any, Self, override
 
 from pydantic import Field, field_validator
 from waivern_core import BaseComponentConfiguration
+from waivern_core.config_validation import validate_or_raise
 from waivern_core.errors import ConnectorConfigError
 
 
@@ -58,30 +59,24 @@ class MongoDBConnectorConfig(BaseComponentConfiguration):
             ConnectorConfigError: If validation fails or required properties are missing
 
         """
-        try:
-            # Merge environment variables with properties (env vars take precedence)
-            config_data = properties.copy()
+        # Merge environment variables with properties (env vars take precedence)
+        config_data = properties.copy()
 
-            # Environment variable overrides
-            if "MONGODB_URI" in os.environ:
-                config_data["uri"] = os.environ["MONGODB_URI"]
-            if "MONGODB_DATABASE" in os.environ:
-                config_data["database"] = os.environ["MONGODB_DATABASE"]
+        # Environment variable overrides
+        if "MONGODB_URI" in os.environ:
+            config_data["uri"] = os.environ["MONGODB_URI"]
+        if "MONGODB_DATABASE" in os.environ:
+            config_data["database"] = os.environ["MONGODB_DATABASE"]
 
-            # Validate required fields are present (either from properties or env)
-            if "uri" not in config_data or config_data["uri"] is None:
-                raise ConnectorConfigError(
-                    "MongoDB uri is required (either 'uri' property or MONGODB_URI env var)"
-                )
-            if "database" not in config_data or config_data["database"] is None:
-                raise ConnectorConfigError(
-                    "MongoDB database is required "
-                    "(either 'database' property or MONGODB_DATABASE env var)"
-                )
-
-            return cls.model_validate(config_data)
-        except ValueError as e:
-            # Convert Pydantic validation errors to ConnectorConfigError
+        # Validate required fields are present (either from properties or env)
+        if "uri" not in config_data or config_data["uri"] is None:
             raise ConnectorConfigError(
-                f"Invalid MongoDB connector configuration: {e}"
-            ) from e
+                "MongoDB uri is required (either 'uri' property or MONGODB_URI env var)"
+            )
+        if "database" not in config_data or config_data["database"] is None:
+            raise ConnectorConfigError(
+                "MongoDB database is required "
+                "(either 'database' property or MONGODB_DATABASE env var)"
+            )
+
+        return validate_or_raise(cls, config_data, ConnectorConfigError)

@@ -6,10 +6,10 @@ from typing import Annotated, Any, Self, override
 from pydantic import (
     BeforeValidator,
     Field,
-    ValidationError,
     field_validator,
 )
 from waivern_core import BaseComponentConfiguration
+from waivern_core.config_validation import validate_or_raise
 from waivern_core.errors import ConnectorConfigError
 
 
@@ -98,22 +98,6 @@ class FilesystemConnectorConfig(BaseComponentConfiguration):
             ConnectorConfigError: If validation fails or required properties are missing
 
         """
-        try:
-            return cls.model_validate(properties)
-        except ValidationError as e:
-            # Extract specific error messages for better user experience
-            for error in e.errors():
-                if error["loc"] == ("path",):
-                    msg = error.get("msg", "")
-                    if "path property is required" in msg:
-                        raise ConnectorConfigError("path property is required") from e
-                    elif error["type"] == "missing":
-                        raise ConnectorConfigError("path property is required") from e
-            # Fall back to general error message
-            raise ConnectorConfigError(
-                f"Invalid filesystem connector configuration: {e}"
-            ) from e
-        except ValueError as e:
-            raise ConnectorConfigError(
-                f"Invalid filesystem connector configuration: {e}"
-            ) from e
+        if not properties.get("path"):
+            raise ConnectorConfigError("path property is required")
+        return validate_or_raise(cls, properties, ConnectorConfigError)

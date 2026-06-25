@@ -5,6 +5,7 @@ from typing import Any, Self, override
 
 from pydantic import Field, field_validator
 from waivern_core import BaseComponentConfiguration
+from waivern_core.config_validation import validate_or_raise
 from waivern_core.errors import ConnectorConfigError
 
 
@@ -96,44 +97,38 @@ class MySQLConnectorConfig(BaseComponentConfiguration):
             ConnectorConfigError: If validation fails or required properties are missing
 
         """
-        try:
-            # Merge environment variables with properties (env vars take precedence)
-            config_data = properties.copy()
+        # Merge environment variables with properties (env vars take precedence)
+        config_data = properties.copy()
 
-            # Required properties with env var fallback
-            if "MYSQL_HOST" in os.environ:
-                config_data["host"] = os.environ["MYSQL_HOST"]
-            if "MYSQL_USER" in os.environ:
-                config_data["user"] = os.environ["MYSQL_USER"]
+        # Required properties with env var fallback
+        if "MYSQL_HOST" in os.environ:
+            config_data["host"] = os.environ["MYSQL_HOST"]
+        if "MYSQL_USER" in os.environ:
+            config_data["user"] = os.environ["MYSQL_USER"]
 
-            # Optional properties with env var fallback
-            if "MYSQL_PASSWORD" in os.environ:
-                config_data["password"] = os.environ["MYSQL_PASSWORD"]
-            if "MYSQL_DATABASE" in os.environ:
-                config_data["database"] = os.environ["MYSQL_DATABASE"]
+        # Optional properties with env var fallback
+        if "MYSQL_PASSWORD" in os.environ:
+            config_data["password"] = os.environ["MYSQL_PASSWORD"]
+        if "MYSQL_DATABASE" in os.environ:
+            config_data["database"] = os.environ["MYSQL_DATABASE"]
 
-            # Handle port with validation
-            if "MYSQL_PORT" in os.environ:
-                try:
-                    config_data["port"] = int(os.environ["MYSQL_PORT"])
-                except ValueError as e:
-                    raise ConnectorConfigError(
-                        f"Invalid MYSQL_PORT environment variable: {os.environ['MYSQL_PORT']}"
-                    ) from e
-
-            # Validate required fields are present (either from properties or env)
-            if "host" not in config_data or config_data["host"] is None:
+        # Handle port with validation
+        if "MYSQL_PORT" in os.environ:
+            try:
+                config_data["port"] = int(os.environ["MYSQL_PORT"])
+            except ValueError as e:
                 raise ConnectorConfigError(
-                    "MySQL host info is required (either 'host' property or MYSQL_HOST env var)"
-                )
-            if "user" not in config_data or config_data["user"] is None:
-                raise ConnectorConfigError(
-                    "MySQL user info is required (either 'user' property or MYSQL_USER env var)"
-                )
+                    f"Invalid MYSQL_PORT environment variable: {os.environ['MYSQL_PORT']}"
+                ) from e
 
-            return cls.model_validate(config_data)
-        except ValueError as e:
-            # Convert Pydantic validation errors to ConnectorConfigError
+        # Validate required fields are present (either from properties or env)
+        if "host" not in config_data or config_data["host"] is None:
             raise ConnectorConfigError(
-                f"Invalid MySQL connector configuration: {e}"
-            ) from e
+                "MySQL host info is required (either 'host' property or MYSQL_HOST env var)"
+            )
+        if "user" not in config_data or config_data["user"] is None:
+            raise ConnectorConfigError(
+                "MySQL user info is required (either 'user' property or MYSQL_USER env var)"
+            )
+
+        return validate_or_raise(cls, config_data, ConnectorConfigError)
