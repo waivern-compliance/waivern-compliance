@@ -40,7 +40,7 @@ class SourceCodeAnalyserFactory(ComponentFactory[SourceCodeAnalyser]):
             Configured SourceCodeAnalyser instance
 
         Raises:
-            ValueError: If configuration is invalid
+            ProcessorConfigError: If the configuration is invalid.
 
         """
         # Parse and validate configuration

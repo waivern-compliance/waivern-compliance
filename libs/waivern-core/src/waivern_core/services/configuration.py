@@ -70,6 +70,15 @@ class BaseServiceConfiguration(BaseModel):
         provider-specific keys and models), layered fallbacks, and post-validation
         enrichment.
 
+        ``from_properties`` is the untrusted-input boundary (runbook properties,
+        environment variables): overriding subclasses translate validation failures
+        into a ``ServiceConfigError``-family error (typically via ``validate_or_raise``)
+        so callers get a uniform, structured config error rather than a raw
+        ``ValidationError``. Direct construction with typed fields
+        (``LLMServiceConfiguration(provider=..., api_key=...)``) is the internal path
+        and surfaces Pydantic's raw ``ValidationError``. The base implementation here
+        does not translate — a subclass relying on it gets the raw error.
+
         Args:
             properties: Dictionary containing configuration properties
 
@@ -77,7 +86,8 @@ class BaseServiceConfiguration(BaseModel):
             Validated configuration instance
 
         Raises:
-            ValidationError: If properties are invalid or missing required fields
+            ValidationError: If properties are invalid (base implementation only;
+                overriding subclasses raise their ``ServiceConfigError``-family error)
 
         Example:
             ```python
@@ -162,6 +172,15 @@ class BaseComponentConfiguration(BaseModel):
         on ``auth_method``), resolving secrets, reading the filesystem, and enriching
         frozen fields after validation.
 
+        ``from_properties`` is the untrusted-input boundary (runbook properties,
+        environment variables): overriding subclasses translate validation failures
+        into their component-category error (``ConnectorConfigError`` for connectors,
+        ``ProcessorConfigError`` for analysers), typically via ``validate_or_raise``,
+        so callers get a uniform, structured config error rather than a raw
+        ``ValidationError``. Direct construction with typed fields is the internal path
+        and surfaces Pydantic's raw ``ValidationError``. The base implementation here
+        does not translate — a subclass relying on it gets the raw error.
+
         Args:
             properties: Dictionary containing configuration properties from runbook
 
@@ -169,7 +188,8 @@ class BaseComponentConfiguration(BaseModel):
             Validated configuration instance
 
         Raises:
-            ValidationError: If properties are invalid or missing required fields
+            ValidationError: If properties are invalid (base implementation only;
+                overriding subclasses raise their component-category error)
 
         Example:
             ```python

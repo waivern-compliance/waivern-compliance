@@ -10,8 +10,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
-from pydantic import ValidationError
 from waivern_artifact_store.base import ArtifactStore
+from waivern_core.errors import ServiceConfigError
 
 from waivern_llm.di.configuration import LLMServiceConfiguration
 from waivern_llm.dispatcher import LLMDispatcher
@@ -65,7 +65,7 @@ class LLMDispatcherFactory:
 
         try:
             return LLMServiceConfiguration.from_properties({})
-        except ValidationError as e:
+        except ServiceConfigError as e:
             logger.debug(f"Cannot create configuration from environment: {e}")
             return None
 

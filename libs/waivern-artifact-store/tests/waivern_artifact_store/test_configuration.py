@@ -13,6 +13,7 @@ from waivern_artifact_store.configuration import (
     MemoryStoreConfig,
     RemoteStoreConfig,
 )
+from waivern_artifact_store.errors import ArtifactStoreConfigError
 from waivern_artifact_store.filesystem import LocalFilesystemStore
 from waivern_artifact_store.in_memory import AsyncInMemoryStore
 
@@ -120,13 +121,15 @@ class TestArtifactStoreConfigurationFromProperties:
         assert isinstance(config.root, FilesystemStoreConfig)
         assert config.root.base_path == Path("/explicit/path")
 
-    def test_from_properties_raises_for_invalid_type_from_environment(
+    def test_from_properties_raises_config_error_for_invalid_type_from_environment(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Raise ValidationError for invalid type from env var."""
+        """Translate an invalid env-var type into the category config error."""
         monkeypatch.setenv("WAIVERN_STORE_TYPE", "invalid_backend")
 
-        with pytest.raises(ValidationError):
+        with pytest.raises(
+            ArtifactStoreConfigError, match="Invalid ArtifactStoreConfiguration"
+        ):
             ArtifactStoreConfiguration.from_properties({})
 
 

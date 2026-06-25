@@ -11,7 +11,10 @@ import os
 from typing import Any, Self, override
 
 from pydantic import Field, field_validator
+from waivern_core.config_validation import validate_or_raise
 from waivern_core.services import BaseServiceConfiguration
+
+from waivern_llm.errors import LLMConfigurationError
 
 
 class LLMServiceConfiguration(BaseServiceConfiguration):
@@ -142,7 +145,7 @@ class LLMServiceConfiguration(BaseServiceConfiguration):
             Validated configuration instance
 
         Raises:
-            ValidationError: If configuration is invalid
+            LLMConfigurationError: If configuration is invalid
 
         Example:
             ```python
@@ -214,7 +217,7 @@ class LLMServiceConfiguration(BaseServiceConfiguration):
             except ValueError:
                 pass  # Leave as default (2)
 
-        return cls.model_validate(config_data)
+        return validate_or_raise(cls, config_data, LLMConfigurationError)
 
     def get_default_model(self) -> str:
         """Get provider-specific default model name.
