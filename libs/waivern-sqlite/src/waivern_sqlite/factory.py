@@ -36,7 +36,7 @@ class SQLiteConnectorFactory(ComponentFactory[SQLiteConnector]):
             Configured SQLiteConnector instance
 
         Raises:
-            ValueError: If configuration is invalid
+            ConnectorConfigError: If the configuration is invalid.
 
         """
         # Parse and validate configuration

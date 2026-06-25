@@ -36,7 +36,7 @@ class MySQLConnectorFactory(ComponentFactory[MySQLConnector]):
             Configured MySQLConnector instance
 
         Raises:
-            ValueError: If configuration is invalid
+            ConnectorConfigError: If the configuration is invalid.
 
         """
         # Parse and validate configuration
