@@ -5,16 +5,28 @@ This module provides:
 - PendingProcessingError: Marker for async processing pending (batch APIs)
 - ConnectorError, ConnectorConfigError, ConnectorExtractionError: Connector exceptions
 - ProcessorError: Base exception for processor-related errors
-- AnalyserError, AnalyserConfigError, AnalyserInputError, AnalyserProcessingError: Analyser exceptions
+- AnalyserError, AnalyserInputError, AnalyserProcessingError: Analyser exceptions
+- ServiceConfigError: Raised when service configuration is invalid
 - ParserError: Parser-related exception
 - MessageValidationError: Message validation exception
 """
 
+from pydantic_core import ErrorDetails
+
 
 class WaivernError(Exception):
-    """Base exception for all Waivern Compliance Framework errors."""
+    """Base exception for all Waivern Compliance Framework errors.
 
-    pass
+    Carries optional Pydantic structured error data so configuration failures
+    translated into framework errors can expose ``.errors()`` to callers.
+    """
+
+    def __init__(
+        self, *args: object, validation_errors: list[ErrorDetails] | None = None
+    ) -> None:
+        """Store optional Pydantic structured error data alongside the message."""
+        super().__init__(*args)
+        self.validation_errors = validation_errors
 
 
 class ConnectorError(WaivernError):
@@ -66,12 +78,6 @@ class AnalyserError(ProcessorError):
     pass
 
 
-class AnalyserConfigError(AnalyserError):
-    """Raised when analyser configuration is invalid."""
-
-    pass
-
-
 class AnalyserInputError(AnalyserError):
     """Raised when analyser input data is invalid."""
 
@@ -80,6 +86,12 @@ class AnalyserInputError(AnalyserError):
 
 class AnalyserProcessingError(AnalyserError):
     """Raised when analyser processing fails."""
+
+    pass
+
+
+class ServiceConfigError(WaivernError):
+    """Raised when service configuration is invalid."""
 
     pass
 

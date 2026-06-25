@@ -2,9 +2,10 @@
 
 from typing import Any, Self, override
 
-from pydantic import Field, ValidationError, field_validator
+from pydantic import Field, field_validator
 from waivern_core import BaseComponentConfiguration
-from waivern_core.errors import AnalyserConfigError
+from waivern_core.config_validation import validate_or_raise
+from waivern_core.errors import ProcessorConfigError
 
 from waivern_source_code_analyser.validators import validate_and_normalise_language
 
@@ -48,17 +49,7 @@ class SourceCodeAnalyserConfig(BaseComponentConfiguration):
             Validated configuration object
 
         Raises:
-            AnalyserConfigError: If validation fails
+            ProcessorConfigError: If validation fails
 
         """
-        try:
-            return cls.model_validate(properties)
-        except ValidationError as e:
-            # Provide clear error messages for validation failures
-            raise AnalyserConfigError(
-                f"Invalid source code analyser configuration: {e}"
-            ) from e
-        except ValueError as e:
-            raise AnalyserConfigError(
-                f"Invalid source code analyser configuration: {e}"
-            ) from e
+        return validate_or_raise(cls, properties, ProcessorConfigError)

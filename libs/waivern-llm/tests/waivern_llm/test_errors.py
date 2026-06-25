@@ -1,6 +1,18 @@
 """Tests for LLM service error types."""
 
-from waivern_llm.errors import LLMServiceError, PendingBatchError
+from waivern_core.errors import ServiceConfigError
+
+from waivern_llm.errors import LLMConfigurationError, LLMServiceError, PendingBatchError
+
+
+class TestLLMConfigurationError:
+    """LLMConfigurationError sits on both the domain and category axes."""
+
+    def test_is_service_config_error_subclass(self) -> None:
+        assert isinstance(LLMConfigurationError("missing key"), ServiceConfigError)
+
+    def test_remains_llm_service_error_subclass(self) -> None:
+        assert isinstance(LLMConfigurationError("missing key"), LLMServiceError)
 
 
 class TestPendingBatchError:

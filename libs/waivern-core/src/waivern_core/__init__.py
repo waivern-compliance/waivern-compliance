@@ -23,7 +23,6 @@ from waivern_core.dispatch import (
     RequestDispatcher,
 )
 from waivern_core.errors import (
-    AnalyserConfigError,
     AnalyserError,
     AnalyserInputError,
     AnalyserProcessingError,
@@ -36,6 +35,7 @@ from waivern_core.errors import (
     ProcessorError,
     ProcessorInputError,
     ProcessorProcessingError,
+    ServiceConfigError,
     WaivernError,
 )
 from waivern_core.llm_validation_types import (
@@ -136,7 +136,6 @@ __all__ = [
     "validate_output_schema",
     # Errors
     "WaivernError",
-    "AnalyserConfigError",
     "AnalyserError",
     "AnalyserInputError",
     "AnalyserProcessingError",
@@ -149,6 +148,7 @@ __all__ = [
     "ProcessorError",
     "ProcessorInputError",
     "ProcessorProcessingError",
+    "ServiceConfigError",
     "RulesetError",
     "SchemaLoadError",
 ]
