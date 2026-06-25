@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 
-from pydantic import ValidationError
+from waivern_core.errors import ServiceConfigError
 
 from waivern_artifact_store.base import ArtifactStore
 from waivern_artifact_store.configuration import ArtifactStoreConfiguration
@@ -76,7 +76,7 @@ class ArtifactStoreFactory:
         # Try to create from environment
         try:
             return ArtifactStoreConfiguration.from_properties({})
-        except ValidationError as e:
+        except ServiceConfigError as e:
             logger.debug(f"Cannot create configuration from environment: {e}")
             return None
 

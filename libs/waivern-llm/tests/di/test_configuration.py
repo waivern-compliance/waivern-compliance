@@ -117,6 +117,21 @@ class TestLLMServiceConfiguration:
                 or "anthropic" in error_msg
             )
 
+    def test_from_properties_invalid_provider_raises_llm_configuration_error(
+        self,
+    ) -> None:
+        """from_properties translates a validation failure to the category error."""
+        import pytest
+
+        from waivern_llm.errors import LLMConfigurationError
+
+        with pytest.raises(
+            LLMConfigurationError, match="Invalid LLMServiceConfiguration"
+        ):
+            LLMServiceConfiguration.from_properties(
+                {"provider": "invalid_provider", "api_key": "test-key"}
+            )
+
     def test_validation_rejects_empty_api_key(self) -> None:
         """Test API key cannot be empty/whitespace."""
         # Test with empty string

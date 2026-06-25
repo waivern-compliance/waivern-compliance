@@ -13,8 +13,10 @@ from pathlib import Path
 from typing import Annotated, Any, Literal, Protocol, Self
 
 from pydantic import BaseModel, ConfigDict, Field, RootModel
+from waivern_core.config_validation import validate_or_raise
 
 from waivern_artifact_store.base import ArtifactStore
+from waivern_artifact_store.errors import ArtifactStoreConfigError
 from waivern_artifact_store.filesystem import LocalFilesystemStore
 from waivern_artifact_store.in_memory import AsyncInMemoryStore
 
@@ -124,7 +126,7 @@ class ArtifactStoreConfiguration(RootModel[_ArtifactStoreConfigUnion]):
             Validated configuration instance
 
         Raises:
-            ValidationError: If configuration is invalid
+            ArtifactStoreConfigError: If configuration is invalid
 
         """
         config_data = properties.copy()
@@ -153,7 +155,7 @@ class ArtifactStoreConfiguration(RootModel[_ArtifactStoreConfigUnion]):
                 if api_key:
                     config_data["api_key"] = api_key
 
-        return cls.model_validate(config_data)
+        return validate_or_raise(cls, config_data, ArtifactStoreConfigError)
 
     def create_store(self) -> ArtifactStore:
         """Create a singleton store instance.
