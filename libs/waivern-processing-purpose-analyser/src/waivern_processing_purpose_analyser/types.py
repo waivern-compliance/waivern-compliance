@@ -1,6 +1,6 @@
 """Configuration and state types for processing purpose analyser."""
 
-from typing import Literal
+from typing import Any, Literal, Self, override
 
 from pydantic import BaseModel, Field
 from waivern_analysers_shared.llm_validation.validation_orchestrator import (
@@ -11,6 +11,8 @@ from waivern_analysers_shared.types import (
     PatternMatchingConfig,
 )
 from waivern_core import BaseComponentConfiguration
+from waivern_core.config_validation import validate_or_raise
+from waivern_core.errors import ProcessorConfigError
 from waivern_schemas.processing_purpose_indicator import ProcessingPurposeIndicatorModel
 
 # Type alias for source code context window sizes
@@ -26,7 +28,6 @@ class ProcessingPurposeAnalyserConfig(BaseComponentConfiguration):
     Inherits from BaseComponentConfiguration to support:
     - Pydantic validation for type safety
     - Immutability (frozen dataclass)
-    - from_properties() factory method (inherited)
     - Strict validation (no extra fields)
     """
 
@@ -46,7 +47,22 @@ class ProcessingPurposeAnalyserConfig(BaseComponentConfiguration):
         description="Context window size for source code evidence: 'small' (±3 lines), 'medium' (±15 lines), 'large' (±50 lines), 'full' (entire file)",
     )
 
-    # from_properties() inherited from BaseComponentConfiguration
+    @classmethod
+    @override
+    def from_properties(cls, properties: dict[str, Any]) -> Self:
+        """Create configuration from runbook properties.
+
+        Args:
+            properties: Raw properties from runbook configuration
+
+        Returns:
+            Validated configuration object
+
+        Raises:
+            ProcessorConfigError: If validation fails
+
+        """
+        return validate_or_raise(cls, properties, ProcessorConfigError)
 
 
 class ProcessingPurposePrepareState(BaseModel):

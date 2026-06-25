@@ -1,8 +1,12 @@
 """Configuration and state types for GDPR data subject classifier."""
 
+from typing import Any, Self, override
+
 from pydantic import BaseModel, Field
 from waivern_analysers_shared.types import LLMValidationConfig
 from waivern_core import BaseComponentConfiguration
+from waivern_core.config_validation import validate_or_raise
+from waivern_core.errors import ProcessorConfigError
 from waivern_schemas.gdpr_data_subject import GDPRDataSubjectFindingModel
 
 
@@ -12,7 +16,6 @@ class GDPRDataSubjectClassifierConfig(BaseComponentConfiguration):
     Inherits from BaseComponentConfiguration to support:
     - Pydantic validation for type safety
     - Immutability (frozen)
-    - from_properties() factory method (inherited)
     - Strict validation (no extra fields)
     """
 
@@ -24,6 +27,23 @@ class GDPRDataSubjectClassifierConfig(BaseComponentConfiguration):
         default_factory=LLMValidationConfig,
         description="LLM validation configuration for risk modifier detection",
     )
+
+    @classmethod
+    @override
+    def from_properties(cls, properties: dict[str, Any]) -> Self:
+        """Create configuration from runbook properties.
+
+        Args:
+            properties: Raw properties from runbook configuration
+
+        Returns:
+            Validated configuration object
+
+        Raises:
+            ProcessorConfigError: If validation fails
+
+        """
+        return validate_or_raise(cls, properties, ProcessorConfigError)
 
 
 class GDPRDataSubjectPrepareState(BaseModel):

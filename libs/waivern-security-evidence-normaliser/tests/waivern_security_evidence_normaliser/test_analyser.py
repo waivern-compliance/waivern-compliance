@@ -3,8 +3,8 @@
 import logging
 
 import pytest
-from pydantic import ValidationError
 from waivern_core import AnalyserContractTests
+from waivern_core.errors import ProcessorConfigError
 from waivern_core.message import Message
 from waivern_core.schemas import Schema
 
@@ -20,9 +20,11 @@ class TestSecurityEvidenceNormaliserConfig:
     """Tests for SecurityEvidenceNormaliserConfig validation."""
 
     def test_maximum_evidence_items_must_be_at_least_one(self) -> None:
-        """maximum_evidence_items=0 raises a validation error."""
-        with pytest.raises(ValidationError):
-            SecurityEvidenceNormaliserConfig(maximum_evidence_items=0)
+        """from_properties rejects maximum_evidence_items=0 with a config error."""
+        with pytest.raises(ProcessorConfigError):
+            SecurityEvidenceNormaliserConfig.from_properties(
+                {"maximum_evidence_items": 0}
+            )
 
 
 class TestSecurityEvidenceNormaliserContract(

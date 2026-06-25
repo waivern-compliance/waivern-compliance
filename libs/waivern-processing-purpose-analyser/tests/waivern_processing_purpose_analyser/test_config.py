@@ -1,7 +1,7 @@
 """Tests for ProcessingPurposeAnalyserConfig."""
 
 import pytest
-from pydantic import ValidationError
+from waivern_core.errors import ProcessorConfigError
 
 from waivern_processing_purpose_analyser.types import (
     ProcessingPurposeAnalyserConfig,
@@ -49,17 +49,17 @@ class TestProcessingPurposeAnalyserConfig:
         assert config.llm_validation.enable_llm_validation is True
         assert config.llm_validation.llm_validation_mode == "conservative"
 
-    def test_from_properties_invalid_ruleset_type_raises_validation_error(self):
+    def test_from_properties_invalid_ruleset_type_raises_processor_config_error(self):
         """Test from_properties rejects invalid ruleset type."""
         invalid_properties = {"pattern_matching": {"ruleset": 123}}
 
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ProcessorConfigError) as exc_info:
             ProcessingPurposeAnalyserConfig.from_properties(invalid_properties)
 
         # Verify error mentions the field with type issue
         assert "ruleset" in str(exc_info.value)
 
-    def test_from_properties_invalid_evidence_context_size_raises_validation_error(
+    def test_from_properties_invalid_evidence_context_size_raises_processor_config_error(
         self,
     ):
         """Test from_properties rejects invalid evidence context size enum."""
@@ -67,7 +67,7 @@ class TestProcessingPurposeAnalyserConfig:
             "pattern_matching": {"evidence_context_size": "invalid_size"}
         }
 
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ProcessorConfigError) as exc_info:
             ProcessingPurposeAnalyserConfig.from_properties(invalid_properties)
 
         # Verify error mentions the invalid enum value
@@ -75,14 +75,14 @@ class TestProcessingPurposeAnalyserConfig:
         assert "evidence_context_size" in error_message
         assert "small" in error_message or "medium" in error_message
 
-    def test_from_properties_invalid_maximum_evidence_count_raises_validation_error(
+    def test_from_properties_invalid_maximum_evidence_count_raises_processor_config_error(
         self,
     ):
         """Test from_properties rejects maximum evidence count outside valid range."""
         # Test below minimum (< 1)
         invalid_properties_low = {"pattern_matching": {"maximum_evidence_count": 0}}
 
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ProcessorConfigError) as exc_info:
             ProcessingPurposeAnalyserConfig.from_properties(invalid_properties_low)
 
         assert "maximum_evidence_count" in str(exc_info.value)
@@ -90,7 +90,7 @@ class TestProcessingPurposeAnalyserConfig:
         # Test above maximum (> 20)
         invalid_properties_high = {"pattern_matching": {"maximum_evidence_count": 21}}
 
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ProcessorConfigError) as exc_info:
             ProcessingPurposeAnalyserConfig.from_properties(invalid_properties_high)
 
         assert "maximum_evidence_count" in str(exc_info.value)
@@ -102,7 +102,7 @@ class TestProcessingPurposeAnalyserConfig:
             "unknown_field": "should_not_be_accepted",
         }
 
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ProcessorConfigError) as exc_info:
             ProcessingPurposeAnalyserConfig.from_properties(invalid_properties)
 
         # Verify error mentions extra field
@@ -129,7 +129,7 @@ class TestSourceCodeContextWindowConfig:
         invalid_properties = {"source_code_context_window": "invalid_size"}
 
         # Act & Assert
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ProcessorConfigError) as exc_info:
             ProcessingPurposeAnalyserConfig.from_properties(invalid_properties)
 
         # Verify error mentions the field
