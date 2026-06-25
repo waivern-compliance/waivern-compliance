@@ -1,8 +1,12 @@
 """Configuration types for crypto quality analyser."""
 
+from typing import Any, Self, override
+
 from pydantic import Field
 from waivern_analysers_shared.types import PatternMatchingConfig
 from waivern_core import BaseComponentConfiguration
+from waivern_core.config_validation import validate_or_raise
+from waivern_core.errors import ProcessorConfigError
 
 
 class CryptoQualityAnalyserConfig(BaseComponentConfiguration):
@@ -11,7 +15,6 @@ class CryptoQualityAnalyserConfig(BaseComponentConfiguration):
     Inherits from BaseComponentConfiguration to support:
     - Pydantic validation for type safety
     - Immutability (frozen dataclass)
-    - from_properties() factory method (inherited)
     - Strict validation (no extra fields)
 
     No LLM validation config — crypto quality assessment is deterministic.
@@ -26,4 +29,19 @@ class CryptoQualityAnalyserConfig(BaseComponentConfiguration):
         description="Pattern matching configuration for crypto algorithm detection",
     )
 
-    # from_properties() inherited from BaseComponentConfiguration
+    @classmethod
+    @override
+    def from_properties(cls, properties: dict[str, Any]) -> Self:
+        """Create configuration from runbook properties.
+
+        Args:
+            properties: Raw properties from runbook configuration
+
+        Returns:
+            Validated configuration object
+
+        Raises:
+            ProcessorConfigError: If validation fails
+
+        """
+        return validate_or_raise(cls, properties, ProcessorConfigError)

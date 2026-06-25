@@ -1,9 +1,12 @@
 """Configuration and LLM interaction types for the extractor."""
 
 import uuid
+from typing import Any, Self, override
 
 from pydantic import BaseModel, Field
 from waivern_core import BaseComponentConfiguration
+from waivern_core.config_validation import validate_or_raise
+from waivern_core.errors import ProcessorConfigError
 from waivern_schemas.security_document_context import SecurityDocumentContextMetadata
 from waivern_schemas.security_domain import SecurityDomain
 
@@ -14,6 +17,23 @@ class SecurityDocumentEvidenceExtractorConfig(BaseComponentConfiguration):
     Domain vocabulary comes from the SecurityDomain enum directly —
     no ruleset config needed.
     """
+
+    @classmethod
+    @override
+    def from_properties(cls, properties: dict[str, Any]) -> Self:
+        """Create configuration from runbook properties.
+
+        Args:
+            properties: Raw properties from runbook configuration
+
+        Returns:
+            Validated configuration object
+
+        Raises:
+            ProcessorConfigError: If validation fails
+
+        """
+        return validate_or_raise(cls, properties, ProcessorConfigError)
 
 
 class DocumentItem(BaseModel):

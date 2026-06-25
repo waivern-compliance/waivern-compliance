@@ -1,7 +1,11 @@
 """Configuration and state types for ISO 27001 control assessor."""
 
+from typing import Any, Self, override
+
 from pydantic import BaseModel, ConfigDict, Field
 from waivern_core import BaseComponentConfiguration
+from waivern_core.config_validation import validate_or_raise
+from waivern_core.errors import ProcessorConfigError
 from waivern_rulesets.iso27001_domains import ISO27001DomainsRule
 from waivern_schemas.iso27001_assessment import EvidenceStatus
 from waivern_schemas.security_document_context import SecurityDocumentContextModel
@@ -41,7 +45,6 @@ class ISO27001AssessorConfig(BaseComponentConfiguration):
     Inherits from BaseComponentConfiguration to support:
     - Pydantic validation for type safety
     - Immutability (frozen dataclass)
-    - from_properties() factory method (inherited)
     - Strict validation (no extra fields)
     """
 
@@ -57,6 +60,23 @@ class ISO27001AssessorConfig(BaseComponentConfiguration):
         default_factory=EvidenceSamplingConfig,
         description="Stratified evidence sampling configuration",
     )
+
+    @classmethod
+    @override
+    def from_properties(cls, properties: dict[str, Any]) -> Self:
+        """Create configuration from runbook properties.
+
+        Args:
+            properties: Raw properties from runbook configuration
+
+        Returns:
+            Validated configuration object
+
+        Raises:
+            ProcessorConfigError: If validation fails
+
+        """
+        return validate_or_raise(cls, properties, ProcessorConfigError)
 
 
 class ISO27001PrepareState(BaseModel):
