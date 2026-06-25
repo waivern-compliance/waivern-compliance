@@ -6,6 +6,7 @@ This module provides:
 - ConnectorError, ConnectorConfigError, ConnectorExtractionError: Connector exceptions
 - ProcessorError: Base exception for processor-related errors
 - AnalyserError, AnalyserConfigError, AnalyserInputError, AnalyserProcessingError: Analyser exceptions
+- ServiceConfigError: Raised when service configuration is invalid
 - ParserError: Parser-related exception
 - MessageValidationError: Message validation exception
 """
@@ -91,6 +92,12 @@ class AnalyserInputError(AnalyserError):
 
 class AnalyserProcessingError(AnalyserError):
     """Raised when analyser processing fails."""
+
+    pass
+
+
+class ServiceConfigError(WaivernError):
+    """Raised when service configuration is invalid."""
 
     pass
 

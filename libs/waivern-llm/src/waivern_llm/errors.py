@@ -1,6 +1,10 @@
 """LLM service exceptions."""
 
-from waivern_core.errors import PendingProcessingError, WaivernError
+from waivern_core.errors import (
+    PendingProcessingError,
+    ServiceConfigError,
+    WaivernError,
+)
 
 
 class LLMServiceError(WaivernError):
@@ -9,8 +13,13 @@ class LLMServiceError(WaivernError):
     pass
 
 
-class LLMConfigurationError(LLMServiceError):
-    """Exception raised when LLM service is misconfigured."""
+class LLMConfigurationError(LLMServiceError, ServiceConfigError):
+    """Exception raised when LLM service is misconfigured.
+
+    An LLM-domain error (``LLMServiceError``) that also participates in the
+    cross-service configuration category (``ServiceConfigError``), so callers can
+    catch any service misconfiguration uniformly.
+    """
 
     pass
 

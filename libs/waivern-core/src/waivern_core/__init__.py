@@ -36,6 +36,7 @@ from waivern_core.errors import (
     ProcessorError,
     ProcessorInputError,
     ProcessorProcessingError,
+    ServiceConfigError,
     WaivernError,
 )
 from waivern_core.llm_validation_types import (
@@ -149,6 +150,7 @@ __all__ = [
     "ProcessorError",
     "ProcessorInputError",
     "ProcessorProcessingError",
+    "ServiceConfigError",
     "RulesetError",
     "SchemaLoadError",
 ]
