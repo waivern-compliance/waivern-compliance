@@ -51,6 +51,9 @@ _DEFAULT_CAPABILITIES = ModelCapabilities(
 )
 
 _MODEL_CAPABILITIES: dict[str, ModelCapabilities] = {
+    # Anthropic Claude 4.6 family (1M context window)
+    "claude-sonnet-4-6": ModelCapabilities(1_000_000, 64_000),
+    "claude-opus-4-6": ModelCapabilities(1_000_000, 128_000),
     # Anthropic Claude 4.5 family
     "claude-opus-4-5": ModelCapabilities(200_000, 8192),
     "claude-sonnet-4-5": ModelCapabilities(200_000, 8192),
