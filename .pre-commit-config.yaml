@@ -39,14 +39,3 @@ repos:
         language: system
         types: [python]
         pass_filenames: true
-
-      # Post-checkout: symlink gitignored local files and Claude memory into
-      # newly-created worktrees. Activate with:
-      #   uv run pre-commit install --hook-type post-checkout
-      - id: setup-worktree
-        name: symlink local files into new worktree
-        entry: bash scripts/post-checkout-setup-worktree.sh
-        language: system
-        stages: [post-checkout]
-        always_run: true
-        pass_filenames: false
