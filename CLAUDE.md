@@ -251,10 +251,24 @@ Pre-commit manages all git hooks for this repo. After cloning, run:
 
 ```bash
 uv run pre-commit install
-uv run pre-commit install --hook-type post-checkout
 ```
 
-The post-checkout hook (`scripts/post-checkout-setup-worktree.sh`) symlinks gitignored local files (`.env`, `.local/`, `.claude/settings.local.json`) and the per-project Claude memory directory from the main worktree into newly-created worktrees. Symlinking (rather than copying) means edits propagate both ways and survive `git worktree remove`.
+## Worktree Setup
+
+Run `./setup.sh` once per worktree after `git worktree add` to provision the gitignored local files a fresh checkout lacks. It is idempotent and safe to re-run.
+
+```bash
+git worktree add ../wcf-feature -b feature/thing
+cd ../wcf-feature
+./setup.sh                # copy local files, link store + memory, uv sync
+./setup.sh --no-install   # files + symlinks only, skip uv sync
+```
+
+What it does:
+- **Copies** `.env` and `.claude/settings.local.json` from the main worktree (never clobbering an existing copy, so branches may diverge). Env files get a key-drift warning when main has `KEY=` entries the copy lacks.
+- **Symlinks** `.local/` to an external store (`$TOOLING_ROOT/<repo>/.local`, default `~/Workspace/tooling/`) shared by every worktree, so it survives `git worktree remove`. A pre-existing real `.local/` directory is migrated into the store first.
+- **Symlinks** the per-project Claude memory directory to main's, so memory is shared across worktrees.
+- **Installs** dependencies via `uv sync --all-groups --all-extras --all-packages` (skip with `--no-install`).
 
 ## Adding New Packages
 
