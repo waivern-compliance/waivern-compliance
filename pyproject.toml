@@ -9,6 +9,7 @@ members = [
 # These definitions are inherited by all workspace members
 waivern-artifact-store = { workspace = true }
 waivern-core = { workspace = true }
+waivern-http = { workspace = true }
 waivern-llm = { workspace = true }
 waivern-connectors-database = { workspace = true }
 waivern-data-subject-analyser = { workspace = true }

@@ -19,6 +19,7 @@ members = [
     "waivern-gdpr-processing-purpose-classifier",
     "waivern-gdpr-service-integration-classifier",
     "waivern-github",
+    "waivern-http",
     "waivern-iso27001-control-assessor",
     "waivern-llm",
     "waivern-mongodb",
@@ -2308,6 +2309,35 @@ requires-dist = [
     { name = "pyjwt", specifier = ">=2.0" },
     { name = "waivern-core", editable = "libs/waivern-core" },
     { name = "waivern-schemas", editable = "libs/waivern-schemas" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "basedpyright", specifier = ">=1.29.2" },
+    { name = "ruff", specifier = ">=0.11.12" },
+]
+
+[[package]]
+name = "waivern-http"
+version = "0.1.0"
+source = { editable = "libs/waivern-http" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "waivern-core" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "basedpyright" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27.0" },
+    { name = "pydantic", specifier = ">=2.11.5" },
+    { name = "waivern-core", editable = "libs/waivern-core" },
 ]
 
 [package.metadata.requires-dev]
