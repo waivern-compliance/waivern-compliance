@@ -185,8 +185,8 @@ class TestCreateAuth:
         for var in [
             "GITHUB_TOKEN",
             "GITHUB_APP_ID",
-            "GITHUB_PRIVATE_KEY_PATH",
-            "GITHUB_INSTALLATION_ID",
+            "GITHUB_APP_PRIVATE_KEY_PATH",
+            "GITHUB_APP_INSTALLATION_ID",
         ]:
             monkeypatch.delenv(var, raising=False)
         monkeypatch.setenv("GITHUB_TOKEN", "ghp_test_token")
@@ -211,8 +211,8 @@ class TestCreateAuth:
         for var in [
             "GITHUB_TOKEN",
             "GITHUB_APP_ID",
-            "GITHUB_PRIVATE_KEY_PATH",
-            "GITHUB_INSTALLATION_ID",
+            "GITHUB_APP_PRIVATE_KEY_PATH",
+            "GITHUB_APP_INSTALLATION_ID",
         ]:
             monkeypatch.delenv(var, raising=False)
 
@@ -235,8 +235,8 @@ class TestCreateAuth:
         for var in [
             "GITHUB_TOKEN",
             "GITHUB_APP_ID",
-            "GITHUB_PRIVATE_KEY_PATH",
-            "GITHUB_INSTALLATION_ID",
+            "GITHUB_APP_PRIVATE_KEY_PATH",
+            "GITHUB_APP_INSTALLATION_ID",
         ]:
             monkeypatch.delenv(var, raising=False)
 
@@ -245,8 +245,8 @@ class TestCreateAuth:
         key_file.write_text(TEST_PRIVATE_KEY)
 
         monkeypatch.setenv("GITHUB_APP_ID", "12345")
-        monkeypatch.setenv("GITHUB_PRIVATE_KEY_PATH", str(key_file))
-        monkeypatch.setenv("GITHUB_INSTALLATION_ID", "67890")
+        monkeypatch.setenv("GITHUB_APP_PRIVATE_KEY_PATH", str(key_file))
+        monkeypatch.setenv("GITHUB_APP_INSTALLATION_ID", "67890")
 
         config = GitHubConnectorConfig.from_properties(
             {

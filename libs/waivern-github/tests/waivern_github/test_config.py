@@ -8,8 +8,8 @@ from waivern_github.config import GitHubConnectorConfig
 GITHUB_ENV_VARS = [
     "GITHUB_TOKEN",
     "GITHUB_APP_ID",
-    "GITHUB_PRIVATE_KEY_PATH",
-    "GITHUB_INSTALLATION_ID",
+    "GITHUB_APP_PRIVATE_KEY_PATH",
+    "GITHUB_APP_INSTALLATION_ID",
 ]
 
 
@@ -168,8 +168,8 @@ class TestGitHubConnectorConfig:
         )
 
         monkeypatch.setenv("GITHUB_APP_ID", "12345")
-        monkeypatch.setenv("GITHUB_PRIVATE_KEY_PATH", str(key_file))
-        monkeypatch.setenv("GITHUB_INSTALLATION_ID", "67890")
+        monkeypatch.setenv("GITHUB_APP_PRIVATE_KEY_PATH", str(key_file))
+        monkeypatch.setenv("GITHUB_APP_INSTALLATION_ID", "67890")
 
         config = GitHubConnectorConfig.from_properties(
             {"repository": "owner/repo", "auth_method": "app"}
@@ -195,12 +195,12 @@ class TestGitHubConnectorConfig:
     def test_from_properties_github_app_missing_private_key_raises_error(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Test from_properties raises error when GITHUB_PRIVATE_KEY_PATH is missing."""
+        """Test from_properties raises error when GITHUB_APP_PRIVATE_KEY_PATH is missing."""
         for var in GITHUB_ENV_VARS:
             monkeypatch.delenv(var, raising=False)
         monkeypatch.setenv("GITHUB_APP_ID", "12345")
 
-        with pytest.raises(ConnectorConfigError, match="GITHUB_PRIVATE_KEY_PATH"):
+        with pytest.raises(ConnectorConfigError, match="GITHUB_APP_PRIVATE_KEY_PATH"):
             GitHubConnectorConfig.from_properties(
                 {"repository": "owner/repo", "auth_method": "app"}
             )
@@ -208,7 +208,7 @@ class TestGitHubConnectorConfig:
     def test_from_properties_github_app_missing_installation_id_raises_error(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path
     ) -> None:
-        """Test from_properties raises error when GITHUB_INSTALLATION_ID is missing."""
+        """Test from_properties raises error when GITHUB_APP_INSTALLATION_ID is missing."""
         for var in GITHUB_ENV_VARS:
             monkeypatch.delenv(var, raising=False)
 
@@ -216,9 +216,9 @@ class TestGitHubConnectorConfig:
         key_file.write_text("test key")
 
         monkeypatch.setenv("GITHUB_APP_ID", "12345")
-        monkeypatch.setenv("GITHUB_PRIVATE_KEY_PATH", str(key_file))
+        monkeypatch.setenv("GITHUB_APP_PRIVATE_KEY_PATH", str(key_file))
 
-        with pytest.raises(ConnectorConfigError, match="GITHUB_INSTALLATION_ID"):
+        with pytest.raises(ConnectorConfigError, match="GITHUB_APP_INSTALLATION_ID"):
             GitHubConnectorConfig.from_properties(
                 {"repository": "owner/repo", "auth_method": "app"}
             )
@@ -234,8 +234,8 @@ class TestGitHubConnectorConfig:
         key_file.write_text("test key")
 
         monkeypatch.setenv("GITHUB_APP_ID", "not_a_number")
-        monkeypatch.setenv("GITHUB_PRIVATE_KEY_PATH", str(key_file))
-        monkeypatch.setenv("GITHUB_INSTALLATION_ID", "67890")
+        monkeypatch.setenv("GITHUB_APP_PRIVATE_KEY_PATH", str(key_file))
+        monkeypatch.setenv("GITHUB_APP_INSTALLATION_ID", "67890")
 
         with pytest.raises(ConnectorConfigError, match="Invalid GITHUB_APP_ID"):
             GitHubConnectorConfig.from_properties(
@@ -250,8 +250,8 @@ class TestGitHubConnectorConfig:
             monkeypatch.delenv(var, raising=False)
 
         monkeypatch.setenv("GITHUB_APP_ID", "12345")
-        monkeypatch.setenv("GITHUB_PRIVATE_KEY_PATH", "/nonexistent/path/key.pem")
-        monkeypatch.setenv("GITHUB_INSTALLATION_ID", "67890")
+        monkeypatch.setenv("GITHUB_APP_PRIVATE_KEY_PATH", "/nonexistent/path/key.pem")
+        monkeypatch.setenv("GITHUB_APP_INSTALLATION_ID", "67890")
 
         with pytest.raises(ConnectorConfigError, match="private key file not found"):
             GitHubConnectorConfig.from_properties(

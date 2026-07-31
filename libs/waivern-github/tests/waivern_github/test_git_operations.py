@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+from urllib.parse import urlparse
 
 import pytest
 
@@ -13,7 +14,6 @@ def make_config(
     repository: str = "owner/repo",
     ref: str = "main",
     clone_strategy: str = "minimal",
-    token: str | None = None,
     clone_timeout: int = 300,
 ) -> GitHubConnectorConfig:
     """Create a GitHubConnectorConfig for testing."""
@@ -24,9 +24,6 @@ def make_config(
             "clone_strategy": clone_strategy,
         }
     )
-    # Set token via internal attribute (simulating env var loading)
-    if token:
-        object.__setattr__(config, "_token", token)
     # Override timeout if different from default
     if clone_timeout != 300:
         object.__setattr__(config, "clone_timeout", clone_timeout)
@@ -114,30 +111,38 @@ class TestGitOperationsAuth:
     """Tests for GitOperations.clone() method - authentication."""
 
     def test_clone_with_token_includes_auth_in_url(self, tmp_path: Path) -> None:
-        """Test that token is embedded in clone URL for private repos."""
+        """Test that the token passed to clone is embedded in the clone URL."""
         git_ops = GitOperations()
-        config = make_config(token="ghp_secret_token")  # noqa: S106 - test token
+        config = make_config()
 
         with patch("waivern_github.git_operations.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
-            git_ops.clone(config=config, target_dir=tmp_path)
+            git_ops.clone(
+                config=config,
+                target_dir=tmp_path,
+                token="ghp_secret_token",  # noqa: S106 - test token
+            )
 
         clone_args = mock_run.call_args_list[0][0][0]
-        clone_url = [arg for arg in clone_args if "github.com" in arg][0]
+        clone_url = [
+            arg for arg in clone_args if urlparse(arg).hostname == "github.com"
+        ][0]
 
         assert "x-access-token:ghp_secret_token@github.com" in clone_url
 
     def test_clone_without_token_uses_plain_url(self, tmp_path: Path) -> None:
         """Test that no auth in URL for public repos."""
         git_ops = GitOperations()
-        config = make_config(token=None)
+        config = make_config()
 
         with patch("waivern_github.git_operations.subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
             git_ops.clone(config=config, target_dir=tmp_path)
 
         clone_args = mock_run.call_args_list[0][0][0]
-        clone_url = [arg for arg in clone_args if "github.com" in arg][0]
+        clone_url = [
+            arg for arg in clone_args if urlparse(arg).hostname == "github.com"
+        ][0]
 
         assert clone_url == "https://github.com/owner/repo.git"
         assert "x-access-token" not in clone_url
@@ -204,6 +209,55 @@ class TestGitOperationsErrors:
                 git_ops.clone(config=config, target_dir=tmp_path)
 
             assert exc_info.value.timeout == 300
+
+    def test_clone_failure_redacts_token_from_exception(self, tmp_path: Path) -> None:
+        """A clone failure must not leak the token in the raised exception."""
+        import subprocess
+
+        git_ops = GitOperations()
+        config = make_config()
+        token = "ghp_super_secret"  # noqa: S105 - test token
+        tokenised_url = f"https://x-access-token:{token}@github.com/owner/repo.git"
+
+        with patch("waivern_github.git_operations.subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.CalledProcessError(
+                returncode=128,
+                cmd=["git", "clone", tokenised_url],
+                stderr=f"fatal: unable to access {tokenised_url}".encode(),
+            )
+
+            with pytest.raises(subprocess.CalledProcessError) as exc_info:
+                git_ops.clone(config=config, target_dir=tmp_path, token=token)
+
+        exc = exc_info.value
+        assert token not in str(exc)
+        assert token not in " ".join(exc.cmd)
+        assert exc.stderr is not None and token.encode() not in exc.stderr
+        assert "***" in " ".join(exc.cmd)
+        assert exc.returncode == 128
+
+    def test_clone_timeout_redacts_token_from_exception(self, tmp_path: Path) -> None:
+        """A clone timeout must not leak the token in the raised exception."""
+        import subprocess
+
+        git_ops = GitOperations()
+        config = make_config()
+        token = "ghp_super_secret"  # noqa: S105 - test token
+        tokenised_url = f"https://x-access-token:{token}@github.com/owner/repo.git"
+
+        with patch("waivern_github.git_operations.subprocess.run") as mock_run:
+            mock_run.side_effect = subprocess.TimeoutExpired(
+                cmd=["git", "clone", tokenised_url],
+                timeout=300,
+            )
+
+            with pytest.raises(subprocess.TimeoutExpired) as exc_info:
+                git_ops.clone(config=config, target_dir=tmp_path, token=token)
+
+        exc = exc_info.value
+        assert token not in str(exc)
+        assert token not in " ".join(exc.cmd)
+        assert exc.timeout == 300
 
 
 class TestGitOperationsSparseCheckout:

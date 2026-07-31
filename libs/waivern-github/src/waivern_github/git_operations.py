@@ -2,6 +2,7 @@
 
 import subprocess
 from pathlib import Path
+from typing import cast
 
 import pathspec
 
@@ -25,13 +26,17 @@ class GitOperations:
         self,
         config: GitHubConnectorConfig,
         target_dir: Path,
+        *,
+        token: str | None = None,
     ) -> None:
         """Clone a repository with the specified strategy.
 
         Args:
             config: GitHub connector configuration containing repository,
-                ref, clone_strategy, clone_timeout, and token.
+                ref, clone_strategy, and clone_timeout.
             target_dir: Directory to clone into.
+            token: Resolved authentication token embedded in the clone URL;
+                ``None`` clones anonymously (public repositories).
 
         Raises:
             subprocess.CalledProcessError: If clone or checkout fails.
@@ -39,30 +44,41 @@ class GitOperations:
 
         """
         # Build clone URL
-        clone_url = self._build_clone_url(config.repository, config.token)
+        clone_url = self._build_clone_url(config.repository, token)
 
         # Build clone command based on strategy and ref
         clone_cmd = self._build_clone_command(
             clone_url, target_dir, config.clone_strategy, config.ref
         )
 
-        # Execute clone
-        subprocess.run(  # noqa: S603 - git command with controlled inputs
-            clone_cmd, check=True, timeout=config.clone_timeout, capture_output=True
-        )
+        # The token is embedded in the clone URL (and thus in the command), so any
+        # subprocess failure would otherwise carry it in the exception's cmd/stderr.
+        # Redact it before the exception propagates to logs or artifacts.
+        try:
+            # Execute clone
+            subprocess.run(  # noqa: S603 - git command with controlled inputs
+                clone_cmd, check=True, timeout=config.clone_timeout, capture_output=True
+            )
 
-        # Checkout specified ref (only needed if ref wasn't specified in clone)
-        # With --branch, git already checks out the specified ref
-        if config.ref == "HEAD":
-            # HEAD is the default, no checkout needed
-            return
+            # Checkout specified ref (only needed if ref wasn't specified in clone)
+            # With --branch, git already checks out the specified ref
+            if config.ref == "HEAD":
+                # HEAD is the default, no checkout needed
+                return
 
-        # For non-HEAD refs that were cloned with --branch, verify we're on the right ref
-        # This handles edge cases where the branch name differs from what was requested
-        checkout_cmd = ["git", "-C", str(target_dir), "checkout", config.ref]
-        subprocess.run(  # noqa: S603 - git command with controlled inputs
-            checkout_cmd, check=True, timeout=config.clone_timeout, capture_output=True
-        )
+            # For non-HEAD refs cloned with --branch, verify we're on the right ref.
+            # This handles edge cases where the branch name differs from requested.
+            checkout_cmd = ["git", "-C", str(target_dir), "checkout", config.ref]
+            subprocess.run(  # noqa: S603 - git command with controlled inputs
+                checkout_cmd,
+                check=True,
+                timeout=config.clone_timeout,
+                capture_output=True,
+            )
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+            if token is None:
+                raise
+            raise self._redact_credentials(e, token) from None
 
     def _build_clone_url(self, repository: str, token: str | None) -> str:
         """Build the clone URL with optional authentication."""
@@ -95,6 +111,57 @@ class GitOperations:
 
         cmd.extend([clone_url, str(target_dir)])
         return cmd
+
+    def _redact_credentials(
+        self,
+        error: subprocess.CalledProcessError | subprocess.TimeoutExpired,
+        token: str,
+    ) -> subprocess.CalledProcessError | subprocess.TimeoutExpired:
+        """Return a copy of a subprocess error with the token scrubbed out.
+
+        The token can appear in the command arguments and captured output, so it
+        is replaced with ``***`` in the ``cmd``, ``output``, and ``stderr`` fields.
+
+        Args:
+            error: The subprocess error raised by a git command.
+            token: The credential token to redact.
+
+        Returns:
+            An equivalent error of the same type with the token removed.
+
+        """
+        placeholder = "***"
+
+        def scrub_stream(value: str | bytes | None) -> str | bytes | None:
+            if isinstance(value, bytes):
+                return value.replace(token.encode(), placeholder.encode())
+            if isinstance(value, str):
+                return value.replace(token, placeholder)
+            return value
+
+        raw_cmd = error.cmd
+        cmd: list[str] | str
+        if isinstance(raw_cmd, list):
+            cmd = [
+                str(arg).replace(token, placeholder)
+                for arg in cast("list[object]", raw_cmd)
+            ]
+        else:
+            cmd = str(raw_cmd).replace(token, placeholder)
+
+        if isinstance(error, subprocess.TimeoutExpired):
+            return subprocess.TimeoutExpired(
+                cmd=cmd,
+                timeout=error.timeout,
+                output=scrub_stream(error.output),
+                stderr=scrub_stream(error.stderr),
+            )
+        return subprocess.CalledProcessError(
+            returncode=error.returncode,
+            cmd=cmd,
+            output=scrub_stream(error.output),
+            stderr=scrub_stream(error.stderr),
+        )
 
     def sparse_checkout(
         self, repo_dir: Path, patterns: list[str], timeout: int = 300

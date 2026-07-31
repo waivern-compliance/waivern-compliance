@@ -120,8 +120,8 @@ class GitHubConnectorConfig(BaseComponentConfiguration):
 
         Environment variables for GitHub App authentication:
         - GITHUB_APP_ID: GitHub App ID
-        - GITHUB_PRIVATE_KEY_PATH: Path to private key .pem file
-        - GITHUB_INSTALLATION_ID: Installation ID
+        - GITHUB_APP_PRIVATE_KEY_PATH: Path to private key .pem file
+        - GITHUB_APP_INSTALLATION_ID: Installation ID
 
         Args:
             properties: Raw properties from runbook configuration
@@ -153,8 +153,8 @@ class GitHubConnectorConfig(BaseComponentConfiguration):
             case "app":
                 # All three are required for GitHub App auth
                 app_id_str = os.environ.get("GITHUB_APP_ID")
-                private_key_path_str = os.environ.get("GITHUB_PRIVATE_KEY_PATH")
-                installation_id_str = os.environ.get("GITHUB_INSTALLATION_ID")
+                private_key_path_str = os.environ.get("GITHUB_APP_PRIVATE_KEY_PATH")
+                installation_id_str = os.environ.get("GITHUB_APP_INSTALLATION_ID")
 
                 if not app_id_str:
                     raise ConnectorConfigError(
@@ -162,11 +162,11 @@ class GitHubConnectorConfig(BaseComponentConfiguration):
                     )
                 if not private_key_path_str:
                     raise ConnectorConfigError(
-                        "GITHUB_PRIVATE_KEY_PATH environment variable is required for GitHub App authentication"
+                        "GITHUB_APP_PRIVATE_KEY_PATH environment variable is required for GitHub App authentication"
                     )
                 if not installation_id_str:
                     raise ConnectorConfigError(
-                        "GITHUB_INSTALLATION_ID environment variable is required for GitHub App authentication"
+                        "GITHUB_APP_INSTALLATION_ID environment variable is required for GitHub App authentication"
                     )
 
                 try:
@@ -180,7 +180,7 @@ class GitHubConnectorConfig(BaseComponentConfiguration):
                     installation_id = int(installation_id_str)
                 except ValueError as e:
                     raise ConnectorConfigError(
-                        f"Invalid GITHUB_INSTALLATION_ID: must be an integer, got '{installation_id_str}'"
+                        f"Invalid GITHUB_APP_INSTALLATION_ID: must be an integer, got '{installation_id_str}'"
                     ) from e
 
                 private_key_path = Path(private_key_path_str)

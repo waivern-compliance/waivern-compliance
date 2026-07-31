@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+from urllib.parse import urlparse
 
 import pytest
 from waivern_core import Schema
@@ -9,6 +10,35 @@ from waivern_core.errors import ConnectorConfigError, ConnectorExtractionError
 
 from waivern_github.config import GitHubConnectorConfig
 from waivern_github.connector import GitHubConnector
+
+# Test RSA private key (2048-bit, generated for testing only - not a real secret)
+TEST_PRIVATE_KEY = """-----BEGIN RSA PRIVATE KEY-----
+MIIEogIBAAKCAQEAnJPOD+lZ1vOxefY4NDO62hr52X0+6Z1SmyPC6yGxWIjXNqEo
+GXglKahILzYhlBbbynFd0T99ybykQxDHh5iytG9vdaEI5u+JQlTg4lAwgxeGwXib
+50jTAVdqchco5DHTJZ1kKBfS9BiXPn1A8HRiHedbIv5gGt7Wtr1UZ8CCzlnsUPtB
+HzQY7EDMxIzj7zRdHaoJFh32EWUAuDhJ9nU3C5k/reawQy5lpp5wJKWXfHLrjub5
+bXFvS6jmsqIfnK04ihsGM0cbSt3BLaeYqxG6KM0Vu9g6pDmMvnqIS84QM3pLrpRt
+0ncvekMlkqhZKzBXiMgUu1zFi9ncUCuu5ft1awIDAQABAoIBABaSmFpi4bjDWQqk
+HGYqLv3SdcKM88zqCUakWS1cphyFXcFaalWBpJnk0MM9oome4gDFZykLZi73Kxcg
+DCPYN6sbhY4HsSjZz4fohKMbvGKpuZuar58gOIsw9v+LpzF+nVoG3rGI/biC8wrn
+M712ic6V0+WvlltJVNrzYH+0mSb2RgOGNoD3RgvTeHzkrCNwy5mEZqIhC6qWv6aL
+OkAMUHtG5phumeWpfWU0+rlJMxzRUQk+OpYN6RhKhJ/231OECwGdBm3dyjtr1mTq
+1o/nsY8aGaaSlRtU1n04g9thzoShbrHFrfo+OxwAgkwDpUIcoHw/Uf0Eh0HjyPmq
+5XRAacECgYEAzeVANOr4qbiwj48NGwxUFFUmSeoMn9hWpVbLcgaEQtJYixy0YyFa
+btWGaTjFlat2P/njYJKqMtrUIYXU7cBVhHEqOpOlr+UsOVlK5CVaIOInNxz/wKrH
+PTWgp6511nm1r2LzH+bZM3r+GqIJJMaIjZIOPWuQfflFzkXmLAqUdV8CgYEAwq4p
+woapy3Wiw5f81JaoYoQESNuoDGyUsNwJU58gaUm+YOnt9QKFoQNRsEMgDOzUaPc6
+jT/+iMp5YPZMdI9MsEJXioP8rNPc1aC9Ek60vbmmt14igrOYaX2bM/a3HgWjI3hh
+zIN0p2XrIZPm62dsG6khEbiJLud3zDZjA9sGz3UCgYBXyNSVO1GF2068BnvJ+nmm
+qZ9HiFiVlkFrARSAqzKc4t4JgdWPJltOQg+qsR/c7lvebwZ42E9km1QybsMYExbi
+/vTIQMc1tXojgWSi3SIOPx4FK4IHfUixWjoDBCkNpprGCmQqR9x3TIsmg8tuOI9j
+/M/BdCkI7MzMY5T9Vg1x9QKBgDSk2BIMTDoCk4MExI/QNbR+MpJpI6ZIbmTs+3Cr
+ZR5TnLGkUH6isfP6a8qYPECCgmXoBONRXMksx2na8I3MelZnejiwvFEX8W2rS7V5
+pxJu85A+WmKxohNUrfV9T8NEjvr2gKvHGHJz8wNfdWBO1UMdlx2toxsV6KVGR7wx
+LERJAoGAabcyAwMcOffiuPVXPp15NNwdoYPgjr+WA6jbJn7Xnqh8jsfhAEyP5svR
+GNsXYeI9wGVTvqtTlM0mmW75I9X5oZJtzXyAwiSw8bQTW4PSLH89C5jCbKyLsJoB
+etSwzDZ4IRDSvUTsYZ1wMJJdEUHZljj8iPpbiivcOXaKelu++So=
+-----END RSA PRIVATE KEY-----"""
 
 
 # Helper to create test configs
@@ -466,6 +496,37 @@ class TestSparseCheckoutBehaviour:
 class TestGitHubConnectorAuth:
     """Tests for authentication handling."""
 
+    def test_extract_app_auth_passes_installation_token_to_clone(
+        self, tmp_path: Path
+    ) -> None:
+        """The token resolved via create_auth is passed to clone()."""
+        config = make_config()
+        connector = GitHubConnector(config)
+
+        fake_auth = MagicMock()
+        fake_auth.get_token.return_value = "ghs_installation_token"
+
+        with (
+            patch(
+                "waivern_github.connector.create_auth", return_value=fake_auth
+            ) as mock_create_auth,
+            patch("waivern_github.connector.GitOperations") as mock_git_ops_class,
+            patch("waivern_github.connector.tempfile.mkdtemp") as mock_mkdtemp,
+            patch("waivern_github.connector.shutil.rmtree"),
+        ):
+            mock_mkdtemp.return_value = str(tmp_path)
+            mock_git_ops = MagicMock()
+            mock_git_ops_class.return_value = mock_git_ops
+            mock_git_ops.collect_files.return_value = []
+
+            connector.extract(Schema("standard_input", "1.0.0"))
+
+        mock_create_auth.assert_called_once_with(config)
+        mock_git_ops.clone.assert_called_once()
+        assert (
+            mock_git_ops.clone.call_args.kwargs["token"] == "ghs_installation_token"  # noqa: S105
+        )
+
     def test_extract_uses_token_from_config(self, tmp_path: Path) -> None:
         """Token from config is available during clone operation."""
         config = make_config(token="ghp_test_token")  # noqa: S106 - test token
@@ -483,10 +544,8 @@ class TestGitHubConnectorAuth:
 
             connector.extract(Schema("standard_input", "1.0.0"))
 
-        # Verify clone was called with config that has token
-        call_args = mock_git_ops.clone.call_args
-        passed_config = call_args[0][0]
-        assert passed_config.token == "ghp_test_token"  # noqa: S105 - test token
+        # The PAT is resolved via create_auth and passed to clone as the token
+        assert mock_git_ops.clone.call_args.kwargs["token"] == "ghp_test_token"  # noqa: S105 - test token
 
     def test_extract_works_without_token(self, tmp_path: Path) -> None:
         """Clone works with token=None for public repos."""
@@ -505,8 +564,64 @@ class TestGitHubConnectorAuth:
 
             result = connector.extract(Schema("standard_input", "1.0.0"))
 
-        # Should complete successfully without token
+        # Should complete successfully, passing no token to clone
         assert result.schema is not None
-        call_args = mock_git_ops.clone.call_args
-        passed_config = call_args[0][0]
-        assert passed_config.token is None
+        assert mock_git_ops.clone.call_args.kwargs["token"] is None
+
+
+class TestGitHubConnectorAppAuthPipeline:
+    """End-to-end wiring of GitHub App auth through the extraction pipeline."""
+
+    def test_app_auth_installation_token_reaches_clone_url(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """App auth mints an installation token that reaches the clone URL.
+
+        Exercises the real chain: extract -> create_auth -> JWT signing ->
+        installation-token exchange -> clone URL, mocking only the two external
+        boundaries (the GitHub token-exchange HTTP call and the git subprocess).
+        """
+        key_file = tmp_path / "app-key.pem"
+        key_file.write_text(TEST_PRIVATE_KEY)
+        clone_dir = tmp_path / "repo"
+        clone_dir.mkdir()
+
+        for var in [
+            "GITHUB_TOKEN",
+            "GITHUB_APP_ID",
+            "GITHUB_APP_PRIVATE_KEY_PATH",
+            "GITHUB_APP_INSTALLATION_ID",
+        ]:
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv("GITHUB_APP_ID", "12345")
+        monkeypatch.setenv("GITHUB_APP_PRIVATE_KEY_PATH", str(key_file))
+        monkeypatch.setenv("GITHUB_APP_INSTALLATION_ID", "67890")
+
+        config = GitHubConnectorConfig.from_properties(
+            {"repository": "owner/repo", "auth_method": "app"}
+        )
+        connector = GitHubConnector(config)
+
+        with (
+            patch("waivern_github.auth.httpx.post") as mock_post,
+            patch("waivern_github.git_operations.subprocess.run") as mock_run,
+            patch(
+                "waivern_github.connector.tempfile.mkdtemp",
+                return_value=str(clone_dir),
+            ),
+            patch("waivern_github.connector.shutil.rmtree"),
+        ):
+            mock_response = MagicMock()
+            mock_response.status_code = 201
+            mock_response.json.return_value = {"token": "ghs_installation_token"}
+            mock_post.return_value = mock_response
+            mock_run.return_value = MagicMock(returncode=0)
+
+            connector.extract(Schema("standard_input", "1.0.0"))
+
+        clone_args = mock_run.call_args_list[0][0][0]
+        clone_url = [
+            arg for arg in clone_args if urlparse(arg).hostname == "github.com"
+        ][0]
+
+        assert "x-access-token:ghs_installation_token@github.com" in clone_url
