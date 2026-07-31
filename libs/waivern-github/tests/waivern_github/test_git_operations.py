@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+from urllib.parse import urlparse
 
 import pytest
 
@@ -123,7 +124,9 @@ class TestGitOperationsAuth:
             )
 
         clone_args = mock_run.call_args_list[0][0][0]
-        clone_url = [arg for arg in clone_args if "github.com" in arg][0]
+        clone_url = [
+            arg for arg in clone_args if urlparse(arg).hostname == "github.com"
+        ][0]
 
         assert "x-access-token:ghp_secret_token@github.com" in clone_url
 
@@ -137,7 +140,9 @@ class TestGitOperationsAuth:
             git_ops.clone(config=config, target_dir=tmp_path)
 
         clone_args = mock_run.call_args_list[0][0][0]
-        clone_url = [arg for arg in clone_args if "github.com" in arg][0]
+        clone_url = [
+            arg for arg in clone_args if urlparse(arg).hostname == "github.com"
+        ][0]
 
         assert clone_url == "https://github.com/owner/repo.git"
         assert "x-access-token" not in clone_url

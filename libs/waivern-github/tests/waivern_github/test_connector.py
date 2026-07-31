@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+from urllib.parse import urlparse
 
 import pytest
 from waivern_core import Schema
@@ -619,6 +620,8 @@ class TestGitHubConnectorAppAuthPipeline:
             connector.extract(Schema("standard_input", "1.0.0"))
 
         clone_args = mock_run.call_args_list[0][0][0]
-        clone_url = [arg for arg in clone_args if "github.com" in arg][0]
+        clone_url = [
+            arg for arg in clone_args if urlparse(arg).hostname == "github.com"
+        ][0]
 
         assert "x-access-token:ghs_installation_token@github.com" in clone_url
