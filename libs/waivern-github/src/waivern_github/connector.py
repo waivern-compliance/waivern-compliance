@@ -13,6 +13,7 @@ from waivern_core.message import Message
 from waivern_schemas.connector_types import FilesystemMetadata
 from waivern_schemas.standard_input import StandardInputDataItemModel
 
+from waivern_github.auth import create_auth
 from waivern_github.config import GitHubConnectorConfig
 from waivern_github.git_operations import GitOperations
 
@@ -73,9 +74,13 @@ class GitHubConnector(Connector):
             clone_dir = tempfile.mkdtemp(prefix="waivern_github_")
             clone_path = Path(clone_dir)
 
+            # Resolve authentication (PAT or GitHub App) to a clone token
+            auth = create_auth(self._config)
+            token = auth.get_token() if auth else None
+
             # Clone repository
             git_ops = GitOperations()
-            git_ops.clone(self._config, clone_path)
+            git_ops.clone(self._config, clone_path, token=token)
 
             # Apply sparse checkout for directory patterns with sparse-enabled strategies
             # Note: git sparse-checkout only supports directory paths, not glob patterns
