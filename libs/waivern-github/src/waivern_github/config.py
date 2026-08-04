@@ -51,12 +51,23 @@ class GitHubConnectorConfig(BaseComponentConfiguration):
         default="pat",
         description="Authentication method: 'pat' (Personal Access Token) or 'app' (GitHub App)",
     )
+    installation_id: str | None = Field(
+        default=None,
+        description=(
+            "GitHub App installation ID. An opaque token owned by GitHub, so it is "
+            "stored verbatim as a string rather than parsed. Varies per client, so "
+            "it belongs in the runbook. The GITHUB_APP_INSTALLATION_ID environment "
+            "variable overrides this value when set."
+        ),
+    )
 
-    # Internal fields populated from environment variables
+    # Internal fields populated from environment variables.
+    # app_id and private_key_path are the shared App identity + secret, so they
+    # are env-only; installation_id is a public field above because it varies per
+    # client and is supplied via the runbook.
     _token: str | None = None
     _app_id: int | None = None
     _private_key_path: Path | None = None
-    _installation_id: int | None = None
 
     @field_validator("repository")
     @classmethod
@@ -105,11 +116,6 @@ class GitHubConnectorConfig(BaseComponentConfiguration):
         """Get the path to the GitHub App private key."""
         return self._private_key_path
 
-    @property
-    def installation_id(self) -> int | None:
-        """Get the GitHub App installation ID."""
-        return self._installation_id
-
     @classmethod
     @override
     def from_properties(cls, properties: dict[str, Any]) -> Self:
@@ -151,10 +157,10 @@ class GitHubConnectorConfig(BaseComponentConfiguration):
                 # Token is optional for public repos
 
             case "app":
-                # All three are required for GitHub App auth
+                # app_id and private_key_path are the shared App identity + secret,
+                # sourced only from the environment.
                 app_id_str = os.environ.get("GITHUB_APP_ID")
                 private_key_path_str = os.environ.get("GITHUB_APP_PRIVATE_KEY_PATH")
-                installation_id_str = os.environ.get("GITHUB_APP_INSTALLATION_ID")
 
                 if not app_id_str:
                     raise ConnectorConfigError(
@@ -164,23 +170,12 @@ class GitHubConnectorConfig(BaseComponentConfiguration):
                     raise ConnectorConfigError(
                         "GITHUB_APP_PRIVATE_KEY_PATH environment variable is required for GitHub App authentication"
                     )
-                if not installation_id_str:
-                    raise ConnectorConfigError(
-                        "GITHUB_APP_INSTALLATION_ID environment variable is required for GitHub App authentication"
-                    )
 
                 try:
                     app_id = int(app_id_str)
                 except ValueError as e:
                     raise ConnectorConfigError(
                         f"Invalid GITHUB_APP_ID: must be an integer, got '{app_id_str}'"
-                    ) from e
-
-                try:
-                    installation_id = int(installation_id_str)
-                except ValueError as e:
-                    raise ConnectorConfigError(
-                        f"Invalid GITHUB_APP_INSTALLATION_ID: must be an integer, got '{installation_id_str}'"
                     ) from e
 
                 private_key_path = Path(private_key_path_str)
@@ -191,6 +186,20 @@ class GitHubConnectorConfig(BaseComponentConfiguration):
 
                 object.__setattr__(config, "_app_id", app_id)
                 object.__setattr__(config, "_private_key_path", private_key_path)
-                object.__setattr__(config, "_installation_id", installation_id)
+
+                # installation_id varies per client: the runbook property supplies
+                # it and GITHUB_APP_INSTALLATION_ID overrides when set. Exactly one
+                # source is required. It is an opaque GitHub token, so the env value
+                # is used verbatim without parsing.
+                installation_id_env = os.environ.get("GITHUB_APP_INSTALLATION_ID")
+                if installation_id_env:
+                    object.__setattr__(config, "installation_id", installation_id_env)
+
+                if config.installation_id is None:
+                    raise ConnectorConfigError(
+                        "installation_id is required for GitHub App authentication: "
+                        "set it in the runbook source properties or the "
+                        "GITHUB_APP_INSTALLATION_ID environment variable"
+                    )
 
         return config
