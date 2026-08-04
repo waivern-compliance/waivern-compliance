@@ -102,3 +102,18 @@ class TestPersonalDataIndicatorPatternCoverage:
     ) -> None:
         """User-uploaded images are personal data and must be detectable."""
         assert pattern in patterns_by_category["user_content"]
+
+    def test_genetic_category_excludes_ambiguous_sequence_pattern(
+        self, patterns_by_category: dict[str, set[str]]
+    ) -> None:
+        """`sequence` must not be a genetic indicator.
+
+        It is a ubiquitous database/code word (Postgres ``CREATE SEQUENCE``,
+        curriculum ordering, etc.), not genetic data. Because ``genetic`` is an
+        Article 9 special category, a bare ``sequence`` pattern fabricates
+        high-severity false positives on ordinary schemas. Specific genetic
+        terms stay — and they already cover compound columns like
+        ``genetic_sequence`` via word-boundary matching.
+        """
+        assert "sequence" not in patterns_by_category["genetic"]
+        assert {"genetic", "dna", "genome"} <= patterns_by_category["genetic"]

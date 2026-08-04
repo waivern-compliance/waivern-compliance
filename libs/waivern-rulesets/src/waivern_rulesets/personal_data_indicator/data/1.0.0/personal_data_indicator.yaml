@@ -512,7 +512,6 @@ rules:
       - genetic
       - dna
       - genome
-      - sequence
 
   - name: Biometric Data
     description: Biometric identifiers
