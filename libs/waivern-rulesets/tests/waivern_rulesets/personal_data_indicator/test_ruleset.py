@@ -62,3 +62,58 @@ class TestPersonalDataIndicatorRulesetDataValidation:
                 categories=["email", "phone"],
                 rules=[rule],
             )
+
+
+# =============================================================================
+# Pattern Coverage Regression Tests
+# =============================================================================
+
+
+class TestPersonalDataIndicatorPatternCoverage:
+    """Pin patterns that must ship in the universal ruleset.
+
+    Guards against gaps found in real codebases: `surname` and its siblings
+    (the base only shipped first_name/last_name/full_name) and user-uploaded
+    images, which had no pattern at all despite being personal data.
+    """
+
+    @pytest.fixture
+    def patterns_by_category(self) -> dict[str, set[str]]:
+        """Map each category to the set of patterns the shipped ruleset has."""
+        ruleset = PersonalDataIndicatorRuleset()
+        mapping: dict[str, set[str]] = {}
+        for rule in ruleset.get_rules():
+            mapping.setdefault(rule.category, set()).update(rule.patterns)
+        return mapping
+
+    @pytest.mark.parametrize("pattern", ["surname", "contact_name", "recipient_name"])
+    def test_name_category_covers_common_name_fields(
+        self, patterns_by_category: dict[str, set[str]], pattern: str
+    ) -> None:
+        """Common personal-name column names must be detectable."""
+        assert pattern in patterns_by_category["name"]
+
+    @pytest.mark.parametrize(
+        "pattern",
+        ["avatar", "photograph", "photo_url", "profile_photo", "profile_picture"],
+    )
+    def test_user_content_covers_user_uploaded_images(
+        self, patterns_by_category: dict[str, set[str]], pattern: str
+    ) -> None:
+        """User-uploaded images are personal data and must be detectable."""
+        assert pattern in patterns_by_category["user_content"]
+
+    def test_genetic_category_excludes_ambiguous_sequence_pattern(
+        self, patterns_by_category: dict[str, set[str]]
+    ) -> None:
+        """`sequence` must not be a genetic indicator.
+
+        It is a ubiquitous database/code word (Postgres ``CREATE SEQUENCE``,
+        curriculum ordering, etc.), not genetic data. Because ``genetic`` is an
+        Article 9 special category, a bare ``sequence`` pattern fabricates
+        high-severity false positives on ordinary schemas. Specific genetic
+        terms stay — and they already cover compound columns like
+        ``genetic_sequence`` via word-boundary matching.
+        """
+        assert "sequence" not in patterns_by_category["genetic"]
+        assert {"genetic", "dna", "genome"} <= patterns_by_category["genetic"]

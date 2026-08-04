@@ -42,7 +42,7 @@ class GitHubAppAuth(GitHubAuth):
         self,
         app_id: int,
         private_key_path: Path,
-        installation_id: int,
+        installation_id: str,
     ) -> None:
         """Initialise with GitHub App credentials."""
         self._app_id = app_id

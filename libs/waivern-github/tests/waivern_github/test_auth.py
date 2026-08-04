@@ -62,7 +62,7 @@ class TestGitHubAppAuth:
         auth = GitHubAppAuth(
             app_id=12345,
             private_key_path=key_file,
-            installation_id=67890,
+            installation_id="67890",
         )
 
         with patch("waivern_github.auth.httpx.post") as mock_post:
@@ -83,7 +83,7 @@ class TestGitHubAppAuth:
         auth = GitHubAppAuth(
             app_id=12345,
             private_key_path=key_file,
-            installation_id=67890,
+            installation_id="67890",
         )
 
         with patch("waivern_github.auth.httpx.post") as mock_post:
@@ -117,7 +117,7 @@ class TestGitHubAppAuth:
         auth = GitHubAppAuth(
             app_id=12345,
             private_key_path=key_file,
-            installation_id=67890,
+            installation_id="67890",
         )
 
         with patch("waivern_github.auth.httpx.post") as mock_post:
@@ -143,7 +143,7 @@ class TestGitHubAppAuth:
         auth = GitHubAppAuth(
             app_id=12345,
             private_key_path=key_file,
-            installation_id=67890,
+            installation_id="67890",
         )
 
         captured_jwt = None

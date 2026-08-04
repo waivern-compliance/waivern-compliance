@@ -178,7 +178,7 @@ class TestGitHubConnectorConfig:
         assert config.auth_method == "app"
         assert config.app_id == 12345
         assert config.private_key_path == key_file
-        assert config.installation_id == 67890
+        assert config.installation_id == "67890"
 
     def test_from_properties_github_app_missing_app_id_raises_error(
         self, monkeypatch: pytest.MonkeyPatch
@@ -205,10 +205,10 @@ class TestGitHubConnectorConfig:
                 {"repository": "owner/repo", "auth_method": "app"}
             )
 
-    def test_from_properties_github_app_missing_installation_id_raises_error(
+    def test_from_properties_github_app_missing_installation_id_from_all_sources_raises_error(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path
     ) -> None:
-        """Test from_properties raises error when GITHUB_APP_INSTALLATION_ID is missing."""
+        """App auth errors when installation_id is in neither the env var nor the runbook."""
         for var in GITHUB_ENV_VARS:
             monkeypatch.delenv(var, raising=False)
 
@@ -218,10 +218,57 @@ class TestGitHubConnectorConfig:
         monkeypatch.setenv("GITHUB_APP_ID", "12345")
         monkeypatch.setenv("GITHUB_APP_PRIVATE_KEY_PATH", str(key_file))
 
-        with pytest.raises(ConnectorConfigError, match="GITHUB_APP_INSTALLATION_ID"):
+        with pytest.raises(ConnectorConfigError, match="installation_id is required"):
             GitHubConnectorConfig.from_properties(
                 {"repository": "owner/repo", "auth_method": "app"}
             )
+
+    def test_from_properties_github_app_installation_id_from_runbook_property(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path
+    ) -> None:
+        """installation_id is taken from the runbook property when the env var is unset."""
+        for var in GITHUB_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
+
+        key_file = tmp_path / "private-key.pem"
+        key_file.write_text("test key")
+
+        monkeypatch.setenv("GITHUB_APP_ID", "12345")
+        monkeypatch.setenv("GITHUB_APP_PRIVATE_KEY_PATH", str(key_file))
+
+        config = GitHubConnectorConfig.from_properties(
+            {
+                "repository": "owner/repo",
+                "auth_method": "app",
+                "installation_id": "150924601",
+            }
+        )
+
+        assert config.installation_id == "150924601"
+
+    def test_from_properties_github_app_env_installation_id_overrides_runbook_property(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path
+    ) -> None:
+        """The GITHUB_APP_INSTALLATION_ID env var overrides the runbook property."""
+        for var in GITHUB_ENV_VARS:
+            monkeypatch.delenv(var, raising=False)
+
+        key_file = tmp_path / "private-key.pem"
+        key_file.write_text("test key")
+
+        monkeypatch.setenv("GITHUB_APP_ID", "12345")
+        monkeypatch.setenv("GITHUB_APP_PRIVATE_KEY_PATH", str(key_file))
+        monkeypatch.setenv("GITHUB_APP_INSTALLATION_ID", "67890")
+
+        config = GitHubConnectorConfig.from_properties(
+            {
+                "repository": "owner/repo",
+                "auth_method": "app",
+                "installation_id": "150924601",
+            }
+        )
+
+        assert config.installation_id == "67890"
 
     def test_from_properties_github_app_invalid_app_id_raises_error(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path
