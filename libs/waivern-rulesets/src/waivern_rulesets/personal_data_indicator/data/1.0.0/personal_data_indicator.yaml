@@ -63,11 +63,14 @@ rules:
       - display_name
       - firstname
       - lastname
+      - surname
       - fullname
       - salutation
       - prefix
       - suffix
       - title
+      - contact_name
+      - recipient_name
 
   - name: Email Address
     description: Email address information
@@ -448,6 +451,11 @@ rules:
       - review
       - feedback
       - message
+      - avatar
+      - photograph
+      - photo_url
+      - profile_photo
+      - profile_picture
 
   # =============================================================================
   # Sensitive Indicators (Article 9 candidates)
