@@ -163,6 +163,27 @@ class GitOperations:
             stderr=scrub_stream(error.stderr),
         )
 
+    def resolve_commit_sha(self, repo_dir: Path, timeout: int = 300) -> str:
+        """Resolve the commit SHA that HEAD points at.
+
+        Args:
+            repo_dir: Path to the cloned repository.
+            timeout: Timeout in seconds.
+
+        Returns:
+            The full 40-character SHA of the checked-out commit.
+
+        Raises:
+            subprocess.CalledProcessError: If rev-parse fails.
+            subprocess.TimeoutExpired: If operation times out.
+
+        """
+        cmd = ["git", "-C", str(repo_dir), "rev-parse", "HEAD"]
+        result = subprocess.run(  # noqa: S603 - git command with controlled inputs
+            cmd, check=True, timeout=timeout, capture_output=True, text=True
+        )
+        return result.stdout.strip()
+
     def sparse_checkout(
         self, repo_dir: Path, patterns: list[str], timeout: int = 300
     ) -> None:
@@ -174,7 +195,7 @@ class GitOperations:
             timeout: Timeout in seconds.
 
         Raises:
-            RuntimeError: If sparse-checkout fails.
+            subprocess.CalledProcessError: If sparse-checkout fails.
             subprocess.TimeoutExpired: If operation times out.
 
         """

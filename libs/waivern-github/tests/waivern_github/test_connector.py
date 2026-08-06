@@ -394,6 +394,35 @@ class TestGitHubConnectorDataItems:
         assert data[0]["metadata"]["connector_type"] == "github"
 
 
+class TestGitHubConnectorOutputMetadata:
+    """Tests for the top-level metadata recorded on connector output."""
+
+    def test_output_metadata_records_commit_sha_alongside_ref(
+        self, tmp_path: Path
+    ) -> None:
+        """Output metadata pins the analysed commit as well as the requested ref."""
+        resolved_sha = "5f1e2c9a4b7d8e3f06a1b2c3d4e5f60718293a4b"
+        config = make_config(ref="main")
+        connector = GitHubConnector(config)
+
+        with (
+            patch("waivern_github.connector.GitOperations") as mock_git_ops_class,
+            patch("waivern_github.connector.tempfile.mkdtemp") as mock_mkdtemp,
+            patch("waivern_github.connector.shutil.rmtree"),
+        ):
+            mock_mkdtemp.return_value = str(tmp_path)
+            mock_git_ops = MagicMock()
+            mock_git_ops_class.return_value = mock_git_ops
+            mock_git_ops.collect_files.return_value = []
+            mock_git_ops.resolve_commit_sha.return_value = resolved_sha
+
+            result = connector.extract(Schema("standard_input", "1.0.0"))
+
+        metadata = result.content["metadata"]
+        assert metadata["commit_sha"] == resolved_sha
+        assert metadata["ref"] == "main"
+
+
 class TestSparseCheckoutBehaviour:
     """Tests for sparse checkout behaviour with different strategies."""
 

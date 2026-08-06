@@ -1,5 +1,7 @@
 """Integration tests for the full GitHubConnector extraction pipeline."""
 
+import re
+
 import pytest
 from waivern_core import Schema
 
@@ -48,3 +50,8 @@ class TestConnectorPipeline:
             item for item in data_items if item["metadata"]["file_path"] == "README"
         )
         assert "Hello World" in readme_item["content"]
+
+        # Verify the analysed commit is pinned. The default "minimal" strategy
+        # clones with --filter=blob:none, so this also proves a partial clone
+        # still carries the commit object needed to resolve HEAD.
+        assert re.fullmatch(r"[0-9a-f]{40}", content["metadata"]["commit_sha"])

@@ -1,5 +1,7 @@
 """Tests for git_operations module."""
 
+import re
+import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 from urllib.parse import urlparse
@@ -8,6 +10,40 @@ import pytest
 
 from waivern_github.config import GitHubConnectorConfig
 from waivern_github.git_operations import GitOperations
+
+
+def run_git(repo_dir: Path, *args: str) -> str:
+    """Run a git command in a test repository and return its stdout."""
+    # Pin identity, signing and the initial branch so repository fixtures do not
+    # inherit the developer's global git configuration.
+    overrides = [
+        "-c",
+        "user.email=tests@waivern.invalid",
+        "-c",
+        "user.name=Waivern Tests",
+        "-c",
+        "commit.gpgsign=false",
+        "-c",
+        "init.defaultBranch=main",
+    ]
+    result = subprocess.run(  # noqa: S603 - git command with controlled inputs
+        ["git", "-C", str(repo_dir), *overrides, *args],  # noqa: S607
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout
+
+
+def commit_empty(repo_dir: Path, message: str) -> None:
+    """Add an empty commit to a test repository."""
+    run_git(repo_dir, "commit", "--allow-empty", "-m", message)
+
+
+def init_repo(repo_dir: Path) -> None:
+    """Initialise a git repository containing a single commit on main."""
+    run_git(repo_dir, "init")
+    commit_empty(repo_dir, "initial commit")
 
 
 def make_config(
@@ -167,6 +203,37 @@ class TestGitOperationsRef:
         assert "git" in checkout_args
         assert "checkout" in checkout_args
         assert "feature/my-branch" in checkout_args
+
+
+class TestGitOperationsResolveCommitSha:
+    """Tests for GitOperations.resolve_commit_sha() method."""
+
+    def test_resolve_commit_sha_returns_forty_character_hex_sha(
+        self, tmp_path: Path
+    ) -> None:
+        """The resolved SHA is a bare 40-character hex string."""
+        init_repo(tmp_path)
+        git_ops = GitOperations()
+
+        sha = git_ops.resolve_commit_sha(tmp_path)
+
+        # fullmatch also rejects the trailing newline git writes to stdout.
+        assert re.fullmatch(r"[0-9a-f]{40}", sha)
+
+    def test_resolve_commit_sha_returns_checked_out_branch_not_default_branch(
+        self, tmp_path: Path
+    ) -> None:
+        """The resolved SHA is HEAD's commit, not the default branch's tip."""
+        init_repo(tmp_path)
+        main_sha = run_git(tmp_path, "rev-parse", "main").strip()
+        run_git(tmp_path, "checkout", "-b", "feature")
+        commit_empty(tmp_path, "feature commit")
+        git_ops = GitOperations()
+
+        sha = git_ops.resolve_commit_sha(tmp_path)
+
+        assert sha == run_git(tmp_path, "rev-parse", "feature").strip()
+        assert sha != main_sha
 
 
 class TestGitOperationsErrors:
