@@ -25,18 +25,34 @@ artifacts:
 
 ## Configuration Options
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `repository` | string | *required* | Repository in `owner/repo` format |
-| `ref` | string | `HEAD` | Branch, tag, or commit SHA |
-| `clone_strategy` | string | `minimal` | Clone strategy (see below) |
-| `include_patterns` | list | `null` | Glob patterns to include |
-| `exclude_patterns` | list | `null` | Glob patterns to exclude |
-| `max_files` | int | `1000` | Maximum files to process |
-| `clone_timeout` | int | `300` | Clone timeout in seconds |
-| `auth_method` | string | `pat` | Authentication method (`pat` or `app`) |
+| Property           | Type   | Default    | Description                            |
+| ------------------ | ------ | ---------- | -------------------------------------- |
+| `repository`       | string | _required_ | Repository in `owner/repo` format      |
+| `ref`              | string | `HEAD`     | Branch, tag, or commit SHA             |
+| `clone_strategy`   | string | `minimal`  | Clone strategy (see below)             |
+| `include_patterns` | list   | `null`     | Glob patterns to include               |
+| `exclude_patterns` | list   | `null`     | Glob patterns to exclude               |
+| `max_files`        | int    | `1000`     | Maximum files to process               |
+| `clone_timeout`    | int    | `300`      | Clone timeout in seconds               |
+| `auth_method`      | string | `pat`      | Authentication method (`pat` or `app`) |
 
 > **Note:** `include_patterns` and `exclude_patterns` are mutually exclusive.
+
+## Output Metadata
+
+Each run records provenance in the top-level `metadata` of its `standard_input` output:
+
+| Key              | Description                                            |
+| ---------------- | ------------------------------------------------------ |
+| `connector_type` | Always `github`                                        |
+| `repository`     | Repository in `owner/repo` format                      |
+| `ref`            | The ref requested in the runbook                       |
+| `commit_sha`     | Full SHA of the commit `ref` resolved to at clone time |
+| `clone_strategy` | Strategy used for the clone                            |
+| `total_files`    | Number of files extracted                              |
+
+`ref` is often a moving branch, so `commit_sha` is what pins a stored artifact to an
+exact revision when auditing a past run.
 
 ## Authentication
 
@@ -58,12 +74,12 @@ Then set `auth_method: "app"` in your runbook properties.
 
 ## Clone Strategies
 
-| Strategy  | Description                             | Use Case               |
-| --------- | --------------------------------------- | ---------------------- |
-| `minimal` | --depth 1 --filter=blob:none --sparse   | Analysis (default)     |
-| `partial` | --filter=blob:none --sparse             | Need history           |
-| `shallow` | --depth 1                               | Quick full checkout    |
-| `full`    | Complete clone                          | Complete repo          |
+| Strategy  | Description                           | Use Case            |
+| --------- | ------------------------------------- | ------------------- |
+| `minimal` | --depth 1 --filter=blob:none --sparse | Analysis (default)  |
+| `partial` | --filter=blob:none --sparse           | Need history        |
+| `shallow` | --depth 1                             | Quick full checkout |
+| `full`    | Complete clone                        | Complete repo       |
 
 ## Development
 

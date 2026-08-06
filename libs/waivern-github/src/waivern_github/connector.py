@@ -82,6 +82,10 @@ class GitHubConnector(Connector):
             git_ops = GitOperations()
             git_ops.clone(self._config, clone_path, token=token)
 
+            # Pin the exact commit analysed. The configured ref may be a moving
+            # branch, so the SHA is what makes a run reproducible for auditing.
+            commit_sha = git_ops.resolve_commit_sha(clone_path)
+
             # Apply sparse checkout for directory patterns with sparse-enabled strategies
             # Note: git sparse-checkout only supports directory paths, not glob patterns
             # File filtering with globs is handled by collect_files() using pathspec
@@ -102,7 +106,7 @@ class GitHubConnector(Connector):
             data_items = self._extract_files(files, clone_path)
 
             # Build output content
-            content = self._build_output(output_schema, data_items)
+            content = self._build_output(output_schema, data_items, commit_sha)
 
             return Message(
                 id=f"GitHub source from {self._config.repository}@{self._config.ref}",
@@ -214,12 +218,14 @@ class GitHubConnector(Connector):
         self,
         schema: Schema,
         data_items: list[StandardInputDataItemModel[FilesystemMetadata]],
+        commit_sha: str,
     ) -> dict[str, object]:
         """Build output content dictionary.
 
         Args:
             schema: Output schema
             data_items: List of extracted data items
+            commit_sha: SHA of the commit the configured ref resolved to
 
         Returns:
             Dictionary conforming to standard_input schema
@@ -235,6 +241,7 @@ class GitHubConnector(Connector):
                 "connector_type": _CONNECTOR_NAME,
                 "repository": self._config.repository,
                 "ref": self._config.ref,
+                "commit_sha": commit_sha,
                 "clone_strategy": self._config.clone_strategy,
                 "total_files": len(data_items),
             },

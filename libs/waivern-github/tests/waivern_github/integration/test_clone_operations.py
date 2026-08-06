@@ -72,7 +72,7 @@ class TestRefCheckout:
 
     @pytest.mark.integration
     def test_clone_with_specific_branch(self, require_git_and_network):
-        """Test cloning a specific branch/ref."""
+        """Test cloning a specific ref checks out that ref's tip commit."""
         # Hello-World has a 'test' branch
         config = GitHubConnectorConfig.from_properties(
             {
@@ -89,13 +89,20 @@ class TestRefCheckout:
             git_ops = GitOperations()
             git_ops.clone(config, clone_path)
 
-            # Verify we're on the test branch
-            result = subprocess.run(
-                ["git", "rev-parse", "--abbrev-ref", "HEAD"],  # noqa: S607
-                check=False,
-                cwd=clone_path,
+            # Ask the remote for the branch tip. This is an independent source of
+            # truth, so comparing against it verifies the checkout rather than
+            # restating whatever the local clone happens to hold.
+            ls_remote = subprocess.run(  # noqa: S603 - git command with controlled inputs
+                [  # noqa: S607
+                    "git",
+                    "ls-remote",
+                    f"https://github.com/{TEST_REPO}.git",
+                    "refs/heads/test",
+                ],
+                check=True,
                 capture_output=True,
                 text=True,
             )
-            # After checkout, HEAD should be detached or on the ref
-            assert result.returncode == 0
+            expected_sha = ls_remote.stdout.split()[0]
+
+            assert git_ops.resolve_commit_sha(clone_path) == expected_sha
