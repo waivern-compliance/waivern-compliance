@@ -282,6 +282,7 @@ rules:
       - theme
       - ui
       - personalization
+      - personalisation
 
   - name: User Identity and Login Management
     purpose: user_identity_login
@@ -406,6 +407,7 @@ rules:
       - monitor
       - measure
       - behavior
+      - behaviour
       - survey
       - product improvement
       - adobe analytics
@@ -441,6 +443,7 @@ rules:
     description: Dynamically personalising products and services based on user data
     patterns:
       - personalization
+      - personalisation
       - recommendation
       - history
       - mirror audience

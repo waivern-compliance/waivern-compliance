@@ -131,7 +131,10 @@ rules:
       - date_born
       - born_on
       - birth_data
+      - age
+      - age_band
       - age_data
+      - grade
       - demographic_data
       - personal_demographics
 
@@ -281,10 +284,26 @@ rules:
       - interactions
       - user_actions
       - behavior_data
+      - behaviour_data
       - form_completion
       - app_usage
       - event_type
       - action_type
+      - scores
+      - progress
+      - completion
+      - completions
+      - assessment
+      - performance
+      - achievement
+      - achievements
+      - badge
+      - badges
+      - certificate
+      - certificates
+      - ranking
+      - leaderboard
+      - streak
 
   - name: Analytics Data
     description: Analytics and tracking data
@@ -386,6 +405,10 @@ rules:
       - preferences
       - declared
       - user_provided
+      - favourite
+      - favourites
+      - favorite
+      - favorites
 
   # =============================================================================
   # Location Indicators
@@ -453,9 +476,19 @@ rules:
       - message
       - avatar
       - photograph
+      - photo
+      - photos
       - photo_url
+      - photo_urls
+      - picture
+      - pictures
       - profile_photo
       - profile_picture
+      - thumbnail
+      - attachment
+      - media
+      - reflection
+      - notes
 
   # =============================================================================
   # Sensitive Indicators (Article 9 candidates)

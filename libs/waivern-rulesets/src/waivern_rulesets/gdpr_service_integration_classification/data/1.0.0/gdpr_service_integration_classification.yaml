@@ -26,6 +26,7 @@ indicator_service_categories:
   - ai_ml_services
   - media_processing
   - healthcare_integrations
+  - education_platforms
 
 # Categories considered privacy-sensitive (require extra scrutiny)
 sensitive_categories:
@@ -194,3 +195,17 @@ rules:
     dpia_recommendation: "required"
     indicator_service_categories:
       - healthcare_integrations
+
+  - name: "Education Platforms"
+    description: "Processing via learning management and school information systems acting as processors for the education provider"
+    purpose_category: "operational"
+    article_references:
+      - "Article 28"
+      - "Article 32"
+    typical_lawful_bases:
+      - "contract"
+      - "public_task"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_service_categories:
+      - education_platforms

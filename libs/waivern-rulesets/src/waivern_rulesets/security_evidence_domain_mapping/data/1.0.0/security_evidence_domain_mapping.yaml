@@ -116,6 +116,7 @@ service_category_values:
   - ai_ml_services
   - media_processing
   - healthcare_integrations
+  - education_platforms
 
 # Master list of valid data collection type slugs
 # DEPENDENCY: Must stay in sync with collection_type_categories in data_collection/1.0.0.
@@ -293,6 +294,14 @@ rules:
       - healthcare_integrations
     security_domain: data_protection
     secondary_domain: people_controls
+
+  - name: third_party_education
+    description: Education platform services map to supplier management with data protection secondary
+    source_type: service_category
+    indicator_values:
+      - education_platforms
+    security_domain: supplier_management
+    secondary_domain: data_protection
 
   # =============================================================================
   # Collection type-based mappings

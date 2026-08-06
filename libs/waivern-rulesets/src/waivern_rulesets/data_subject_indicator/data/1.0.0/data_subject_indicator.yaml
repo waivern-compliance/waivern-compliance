@@ -37,6 +37,9 @@ rules:
   - worker
   - team_member
   - employees
+  - teacher
+  - teachers
+  - teaching_staff
   - personnel
   - hr_records
   - staff_member
@@ -748,9 +751,21 @@ rules:
   patterns:
   - students
   - student
+  - child
+  - children
+  - kid
+  - kids
+  - pupil
+  - pupils
+  - learner
+  - learners
   - student_records
   - academic_records
   - enrollment
+  - enrolment
+  - enrolments
+  - year_group
+  - key_stage
   - student_id
   - student_number
   - academic_year

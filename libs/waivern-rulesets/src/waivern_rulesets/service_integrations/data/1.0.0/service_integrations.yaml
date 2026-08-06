@@ -14,6 +14,7 @@ service_categories:
 - ai_ml_services
 - media_processing
 - healthcare_integrations
+- education_platforms
 purpose_categories:
 - operational
 - analytics
@@ -32,6 +33,8 @@ rules:
   - azure
   - microsoft
   - dropbox
+  - supabase
+  - expo
   - storage
   - upload
   service_category: cloud_infrastructure
@@ -207,4 +210,20 @@ rules:
   - practiceportal
   - gympods
   service_category: healthcare_integrations
+  purpose_category: operational
+- name: Education Platforms
+  description: Learning management and school information system integrations
+  patterns:
+  - learnworlds
+  - moodle
+  - blackboard
+  - canvas-lms
+  - schoology
+  - powerschool
+  - google_classroom
+  - teachable
+  - thinkific
+  - kahoot
+  - seesaw
+  service_category: education_platforms
   purpose_category: operational
