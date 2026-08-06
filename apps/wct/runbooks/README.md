@@ -272,10 +272,14 @@ This enables real-time validation in VS Code, PyCharm, and other IDEs.
 
 ### Config Fields
 
-| Field             | Type | Default | Description                       |
-| ----------------- | ---- | ------- | --------------------------------- |
-| `timeout`         | int  | None    | Total execution timeout (seconds) |
-| `max_concurrency` | int  | 10      | Maximum parallel artifacts        |
+| Field             | Type  | Default | Description                       |
+| ----------------- | ----- | ------- | --------------------------------- |
+| `timeout`         | int   | 300     | Total execution timeout (seconds) |
+| `max_concurrency` | int   | 10      | Maximum parallel artifacts        |
+| `max_child_depth` | int   | 3       | Maximum child runbook nesting     |
+| `cost_limit`      | float | None    | Maximum LLM API cost              |
+| `template_paths`  | list  | []      | Search paths for child runbooks   |
+| `keep_llm_cache`  | bool  | false   | Keep the LLM cache after success  |
 
 ### Artifact Fields
 

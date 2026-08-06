@@ -288,14 +288,16 @@ config:
   template_paths: # Directories for child runbooks
     - ./templates
     - ./shared
+  keep_llm_cache: false # Retain LLM responses after a successful run
 ```
 
 | Field             | Type    | Default | Description                       |
 | ----------------- | ------- | ------- | --------------------------------- |
-| `timeout`         | integer | None    | Total execution timeout (seconds) |
+| `timeout`         | integer | 300     | Total execution timeout (seconds) |
 | `cost_limit`      | float   | None    | Maximum LLM API cost              |
 | `max_concurrency` | integer | 10      | Max parallel artifact execution   |
 | `template_paths`  | list    | []      | Search paths for child runbooks   |
+| `keep_llm_cache`  | boolean | false   | Keep the LLM cache after success  |
 
 ### Environment Variable Substitution
 

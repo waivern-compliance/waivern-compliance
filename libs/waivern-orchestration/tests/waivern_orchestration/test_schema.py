@@ -1,9 +1,21 @@
 """Tests for RunbookSchemaGenerator."""
 
 import json
+from importlib.resources import files
 from pathlib import Path
 
 from waivern_orchestration import RunbookSchemaGenerator
+
+COMMITTED_SCHEMA_PATH = Path(
+    str(
+        files("waivern_orchestration")
+        / "schemas"
+        / "json_schemas"
+        / "runbook"
+        / RunbookSchemaGenerator.SCHEMA_VERSION
+        / "runbook.json"
+    )
+)
 
 
 class TestRunbookSchemaGenerator:
@@ -66,3 +78,15 @@ class TestRunbookSchemaGenerator:
         generated = RunbookSchemaGenerator.generate_schema()
 
         assert saved == generated
+
+    def test_committed_schema_matches_generated_schema(self) -> None:
+        """The schema file shipped with the package is up to date.
+
+        Editors validate runbooks against the committed file rather than the
+        Pydantic models, so it silently rots whenever a model gains a field.
+        Regenerate with ``uv run wct generate-schema -o <path>``.
+        """
+        with open(COMMITTED_SCHEMA_PATH, encoding="utf-8") as f:
+            committed = json.load(f)
+
+        assert committed == RunbookSchemaGenerator.generate_schema()

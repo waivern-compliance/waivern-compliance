@@ -64,6 +64,14 @@ class RunbookConfig(BaseModel):
     template_paths: list[str] = Field(default_factory=list)
     """Directories to search for child runbooks."""
 
+    keep_llm_cache: bool = False
+    """Retain the run's LLM cache instead of clearing it on success.
+
+    Cached LLM responses are normally deleted once a run completes. Setting
+    this keeps them for inspection. Interrupted and failed runs retain the
+    cache regardless, so this only affects successful runs.
+    """
+
 
 # =============================================================================
 # Child Runbook Support

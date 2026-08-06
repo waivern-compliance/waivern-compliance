@@ -108,6 +108,7 @@ class TestRunbookConfig:
         assert config.timeout == 300  # 5 minutes default
         assert config.max_concurrency == 10
         assert config.cost_limit is None  # No limit by default
+        assert config.keep_llm_cache is False  # Cache cleared on success
 
     def test_runbook_config_max_child_depth_default(self) -> None:
         """RunbookConfig should default max_child_depth to 3."""

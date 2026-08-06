@@ -53,6 +53,21 @@ When a processor raises `PendingProcessingError` (e.g., from LLM batch submissio
 
 On resume, the pending artifact is re-attempted. Since the LLM cache has been populated by the poller, it completes immediately.
 
+### LLM Cache Retention
+
+LLM responses are cached per run so a resumed run can replay them instead of calling the provider again. Once a run completes successfully the cache is deleted. To keep it for inspection:
+
+```yaml
+config:
+  keep_llm_cache: true
+```
+
+Interrupted and failed runs retain their cache regardless, so this setting only changes what happens on success. With the filesystem store, entries stay in `{base_path}/runs/{run_id}/llm_cache/`.
+
+Set this on the top-level runbook. Child runbook `config` blocks are discarded during flattening, so the parent's setting governs the whole run.
+
+The setting is read from the runbook on every execution, including resumed ones, so it can be switched on for a run that is already part-way through.
+
 ### Artifact Reuse
 
 Reuse artifacts from previous runs without re-executing:

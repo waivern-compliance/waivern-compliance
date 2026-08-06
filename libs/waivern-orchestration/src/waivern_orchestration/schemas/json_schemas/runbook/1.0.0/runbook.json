@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "$defs": {
     "ArtifactDefinition": {
-      "description": "Definition of a single artifact in a runbook.",
+      "description": "Definition of a single artifact in a runbook.\n\nAn artifact has exactly one production method:\n- `source`: Extract data from a connector\n- `inputs` + `process`: Transform data from other artifacts\n- `reuse`: Copy from a previous run",
       "properties": {
         "name": {
           "anyOf": [
@@ -81,6 +81,17 @@
           ],
           "default": null
         },
+        "reuse": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReuseConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "merge": {
           "const": "concatenate",
           "default": "concatenate",
@@ -119,9 +130,69 @@
             }
           ],
           "default": null
+        },
+        "child_runbook": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChildRunbookConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "title": "ArtifactDefinition",
+      "type": "object"
+    },
+    "ChildRunbookConfig": {
+      "description": "Configuration for child runbook directive.",
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "input_mapping": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Input Mapping",
+          "type": "object"
+        },
+        "output": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output"
+        },
+        "output_mapping": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Mapping"
+        }
+      },
+      "required": [
+        "path",
+        "input_mapping"
+      ],
+      "title": "ChildRunbookConfig",
       "type": "object"
     },
     "ExecuteConfig": {
@@ -163,6 +234,75 @@
       "title": "ExecuteConfig",
       "type": "object"
     },
+    "JsonValue": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "array"
+        },
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "ProcessConfig": {
+      "description": "Configuration for a processor (analyser, orchestrator, etc.).",
+      "properties": {
+        "type": {
+          "title": "Type",
+          "type": "string"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": true,
+          "title": "Properties"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "ProcessConfig",
+      "type": "object"
+    },
+    "ReuseConfig": {
+      "description": "Configuration for reusing an artifact from a previous run.\n\nAllows copying an artifact's output from a completed run instead of\nre-executing the production logic. Useful for resuming workflows or\nreusing expensive computations.\n\nAttributes:\n    from_run: The run ID to copy the artifact from.\n    artifact: The artifact ID in the source run to copy.",
+      "properties": {
+        "from_run": {
+          "title": "From Run",
+          "type": "string"
+        },
+        "artifact": {
+          "title": "Artifact",
+          "type": "string"
+        }
+      },
+      "required": [
+        "from_run",
+        "artifact"
+      ],
+      "title": "ReuseConfig",
+      "type": "object"
+    },
     "RunbookConfig": {
       "description": "Optional execution configuration for a runbook.",
       "properties": {
@@ -192,9 +332,87 @@
           ],
           "default": null,
           "title": "Cost Limit"
+        },
+        "template_paths": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Template Paths",
+          "type": "array"
+        },
+        "keep_llm_cache": {
+          "default": false,
+          "title": "Keep Llm Cache",
+          "type": "boolean"
         }
       },
       "title": "RunbookConfig",
+      "type": "object"
+    },
+    "RunbookInputDeclaration": {
+      "description": "Declaration of an expected input for a child runbook.",
+      "properties": {
+        "input_schema": {
+          "title": "Input Schema",
+          "type": "string"
+        },
+        "optional": {
+          "default": false,
+          "title": "Optional",
+          "type": "boolean"
+        },
+        "default": {
+          "$ref": "#/$defs/JsonValue",
+          "default": null
+        },
+        "sensitive": {
+          "default": false,
+          "title": "Sensitive",
+          "type": "boolean"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        }
+      },
+      "required": [
+        "input_schema"
+      ],
+      "title": "RunbookInputDeclaration",
+      "type": "object"
+    },
+    "RunbookOutputDeclaration": {
+      "description": "Declaration of an output that a child runbook exposes.",
+      "properties": {
+        "artifact": {
+          "title": "Artifact",
+          "type": "string"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        }
+      },
+      "required": [
+        "artifact"
+      ],
+      "title": "RunbookOutputDeclaration",
       "type": "object"
     },
     "SourceConfig": {
@@ -214,25 +432,6 @@
         "type"
       ],
       "title": "SourceConfig",
-      "type": "object"
-    },
-    "ProcessConfig": {
-      "description": "Configuration for a processor (analyser, orchestrator, etc.).",
-      "properties": {
-        "type": {
-          "title": "Type",
-          "type": "string"
-        },
-        "properties": {
-          "type": "object",
-          "additionalProperties": true,
-          "title": "Properties"
-        }
-      },
-      "required": [
-        "type"
-      ],
-      "title": "ProcessConfig",
       "type": "object"
     }
   },
@@ -258,8 +457,50 @@
       "default": null,
       "title": "Contact"
     },
+    "framework": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Framework"
+    },
     "config": {
       "$ref": "#/$defs/RunbookConfig"
+    },
+    "inputs": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/RunbookInputDeclaration"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Inputs"
+    },
+    "outputs": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/RunbookOutputDeclaration"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Outputs"
     },
     "artifacts": {
       "additionalProperties": {

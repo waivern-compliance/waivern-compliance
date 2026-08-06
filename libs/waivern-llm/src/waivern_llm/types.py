@@ -226,7 +226,8 @@ class LLMRequest[T: Finding](DispatchRequest):
     prompt_builder: PromptBuilder[T] | None = Field(default=None, exclude=True)
     """Domain-specific prompt builder. Excluded from serialisation.
 
-    Required on first run. ``None`` on resume (prompts already cached).
+    Required on first run. ``None`` on resume, where ``built_cache_keys``
+    locates the cached responses so prompts never need rebuilding.
     """
 
     response_model: type[BaseModel] | None = Field(default=None, exclude=True)
