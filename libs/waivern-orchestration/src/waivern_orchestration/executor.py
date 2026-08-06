@@ -242,8 +242,9 @@ class DAGExecutor:
             # phases and later phases need cache entries written by
             # earlier batch submissions. Cannot clear when interrupted
             # (pending batches still need cache for poller + resume).
-            llm_cache = cast("LLMCache", store)
-            await llm_cache.cache_clear(run_ctx.metadata.run_id)
+            if not config.keep_llm_cache:
+                llm_cache = cast("LLMCache", store)
+                await llm_cache.cache_clear(run_ctx.metadata.run_id)
         await run_ctx.save_metadata(store)
 
         total_duration = time.monotonic() - start_time
