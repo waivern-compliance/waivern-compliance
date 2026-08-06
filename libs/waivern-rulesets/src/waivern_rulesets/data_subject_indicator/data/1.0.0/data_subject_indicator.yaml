@@ -37,6 +37,11 @@ rules:
   - worker
   - team_member
   - employees
+  - teacher
+  - teachers
+  - teaching_staff
+  - cpd
+  - continuing_professional_development
   - personnel
   - hr_records
   - staff_member
@@ -122,6 +127,8 @@ rules:
   patterns:
   - terminated
   - inactive
+  - deactivated
+  - suspended
   - former
   - ex_employee
   - termination_date
@@ -748,9 +755,21 @@ rules:
   patterns:
   - students
   - student
+  - child
+  - children
+  - kid
+  - kids
+  - pupil
+  - pupils
+  - learner
+  - learners
   - student_records
   - academic_records
   - enrollment
+  - enrolment
+  - enrolments
+  - year_group
+  - key_stage
   - student_id
   - student_number
   - academic_year

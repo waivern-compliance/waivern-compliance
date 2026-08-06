@@ -22,6 +22,7 @@ purposes:
   - Customization of Products and Services
   - User Identity and Login Management
   - Payment, Billing, and Invoicing
+  - Consent and Withdrawal Management
   # Analytics
   - Behavioral Data Analysis for Product Improvement
   # Marketing and Advertising
@@ -54,6 +55,7 @@ purpose_slugs:
   - product_customisation
   - user_identity_login
   - payment_billing
+  - consent_management
   - behavioral_analytics
   - dynamic_personalisation
   - consumer_marketing
@@ -282,6 +284,7 @@ rules:
       - theme
       - ui
       - personalization
+      - personalisation
 
   - name: User Identity and Login Management
     purpose: user_identity_login
@@ -293,6 +296,11 @@ rules:
       - profile
       - credentials
       - password
+      - invite
+      - invites
+      - invitation
+      - invitations
+      - invited_at
       - user id
       - ssn
       - social security number
@@ -393,6 +401,39 @@ rules:
       - Bank of America Merchant Services
       - Wells Fargo Merchant Services
 
+  - name: Consent and Withdrawal Management
+    purpose: consent_management
+    description: Recording, refreshing and withdrawing consent, including parental consent for children
+    patterns:
+      - consent
+      - consents
+      - consented
+      - consented_at
+      - consent_method
+      - consent_state
+      - consent_version
+      - re_consent
+      - reconsent
+      - withdraw
+      - withdrawn
+      - withdrawal
+      - opt_in
+      - opt in
+      - opt_out
+      - opt out
+      - parental
+      - parental_consent
+      - guardian_consent
+      - policy_consent
+      - policy_consents
+      - cookie_consent
+      - consent_banner
+      - preference_centre
+      - preference_center
+      - privacy_policy
+      - lawful_basis
+      - legal_basis
+
   # =============================================================================
   # Analytics Purposes
   # =============================================================================
@@ -406,6 +447,7 @@ rules:
       - monitor
       - measure
       - behavior
+      - behaviour
       - survey
       - product improvement
       - adobe analytics
@@ -441,6 +483,7 @@ rules:
     description: Dynamically personalising products and services based on user data
     patterns:
       - personalization
+      - personalisation
       - recommendation
       - history
       - mirror audience
@@ -635,6 +678,7 @@ rules:
       - exception_handler
       - alerting
       - escalation
+      - escalations
       - pagerduty
       - opsgenie
       - sentry

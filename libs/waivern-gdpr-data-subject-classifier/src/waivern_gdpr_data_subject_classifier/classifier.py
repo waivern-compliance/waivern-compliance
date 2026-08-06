@@ -123,6 +123,10 @@ class GDPRDataSubjectClassifier(Classifier):
         self._available_modifiers = list(
             risk_modifiers.risk_increasing + risk_modifiers.risk_decreasing
         )
+        self._modifier_article_references = {
+            modifier.modifier: tuple(modifier.article_references)
+            for modifier in self._available_modifiers
+        }
         self._risk_modifier_detector = RiskModifierDetector(risk_modifiers)
         self._result_builder = GDPRDataSubjectResultBuilder(config)
 
@@ -473,10 +477,18 @@ class GDPRDataSubjectClassifier(Classifier):
         finding: GDPRDataSubjectFindingModel,
         modifiers: list[str],
     ) -> GDPRDataSubjectFindingModel:
-        """Create a new finding with the specified risk modifiers."""
+        """Create a new finding with the specified risk modifiers.
+
+        A modifier carries its own article references — 'minor' invokes
+        Article 8, the Article 9 modifiers invoke special-category duties — so
+        they are merged into the finding's references. Without this the Article
+        30 record would name the modifier but omit the provision it triggers.
+        """
         return GDPRDataSubjectFindingModel(
             data_subject_category=finding.data_subject_category,
-            article_references=finding.article_references,
+            article_references=self._merge_modifier_article_references(
+                finding.article_references, modifiers
+            ),
             typical_lawful_bases=finding.typical_lawful_bases,
             risk_modifiers=modifiers,
             confidence_score=finding.confidence_score,
@@ -484,3 +496,20 @@ class GDPRDataSubjectClassifier(Classifier):
             matched_patterns=finding.matched_patterns,
             metadata=finding.metadata,
         )
+
+    def _merge_modifier_article_references(
+        self,
+        category_references: Sequence[str],
+        modifiers: list[str],
+    ) -> tuple[str, ...]:
+        """Append each modifier's article references, preserving order and deduplicating.
+
+        Modifier names reaching the LLM path are model-generated free text, so
+        names absent from the ruleset are ignored rather than treated as errors.
+        """
+        merged = list(category_references)
+        for modifier in modifiers:
+            for reference in self._modifier_article_references.get(modifier, ()):
+                if reference not in merged:
+                    merged.append(reference)
+        return tuple(merged)

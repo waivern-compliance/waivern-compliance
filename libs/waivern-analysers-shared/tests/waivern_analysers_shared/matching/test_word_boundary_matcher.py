@@ -73,6 +73,22 @@ class TestWordBoundaryMatcherBoundaryDetection:
         assert len(matcher.find_match("message", "age").representative_matches) == 0
         assert len(matcher.find_match("storage", "age").representative_matches) == 0
 
+    def test_no_match_when_pattern_is_a_prefix_of_a_longer_token(self) -> None:
+        """Pattern does NOT match when the content continues with alphanumerics.
+
+        The trailing boundary is enforced as strictly as the leading one, so a
+        singular pattern never matches its plural. Rulesets must list plural
+        forms explicitly rather than relying on prefix matching.
+        """
+        matcher = WordBoundaryMatcher()
+
+        assert (
+            len(matcher.find_match("photo_urls", "photo_url").representative_matches)
+            == 0
+        )
+        assert len(matcher.find_match("children", "child").representative_matches) == 0
+        assert len(matcher.find_match("ages", "age").representative_matches) == 0
+
     def test_no_match_in_base64_encoded_string(self) -> None:
         """Pattern does NOT match inside base64-like encoded strings."""
         matcher = WordBoundaryMatcher()

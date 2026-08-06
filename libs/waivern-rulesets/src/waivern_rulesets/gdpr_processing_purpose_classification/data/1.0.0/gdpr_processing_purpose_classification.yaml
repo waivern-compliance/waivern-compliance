@@ -29,6 +29,7 @@ indicator_purposes:
   - product_customisation
   - user_identity_login
   - payment_billing
+  - consent_management
   # Analytics
   - behavioral_analytics
   # Marketing and Advertising
@@ -179,6 +180,21 @@ rules:
     dpia_recommendation: "not_required"
     indicator_purposes:
       - payment_billing
+
+  - name: "Consent Management"
+    description: "Processing to record, refresh and withdraw consent, including verifiable parental consent for children"
+    purpose_category: "operational"
+    article_references:
+      - "Article 6(1)(a)"
+      - "Article 7"
+      - "Article 7(3)"
+      - "Article 8"
+    typical_lawful_bases:
+      - "consent"
+    sensitive_purpose: false
+    dpia_recommendation: "not_required"
+    indicator_purposes:
+      - consent_management
 
   - name: "Supplier and Vendor Management"
     description: "Processing for managing third-party supplier and vendor integrations"

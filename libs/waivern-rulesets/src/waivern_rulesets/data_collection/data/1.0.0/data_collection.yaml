@@ -66,6 +66,8 @@ rules:
   patterns:
   - localStorage
   - sessionStorage
+  - AsyncStorage
+  - SecureStore
   - document.cookie
   - FormData
   collection_type: client_storage

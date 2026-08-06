@@ -22,6 +22,7 @@ purpose_slugs:
   - product_customisation
   - user_identity_login
   - payment_billing
+  - consent_management
   - behavioral_analytics
   - dynamic_personalisation
   - consumer_marketing
@@ -116,6 +117,7 @@ service_category_values:
   - ai_ml_services
   - media_processing
   - healthcare_integrations
+  - education_platforms
 
 # Master list of valid data collection type slugs
 # DEPENDENCY: Must stay in sync with collection_type_categories in data_collection/1.0.0.
@@ -144,6 +146,14 @@ rules:
     indicator_values:
       - user_identity_login
     security_domain: authentication
+
+  - name: consent_and_withdrawal
+    description: Consent recording and withdrawal is a data-protection control, evidenced by the consent record itself
+    source_type: purpose
+    indicator_values:
+      - consent_management
+    security_domain: data_protection
+    secondary_domain: logging_monitoring
 
   - name: security_and_testing
     description: Security testing, fraud prevention, and vulnerability assessment purposes
@@ -293,6 +303,14 @@ rules:
       - healthcare_integrations
     security_domain: data_protection
     secondary_domain: people_controls
+
+  - name: third_party_education
+    description: Education platform services map to supplier management with data protection secondary
+    source_type: service_category
+    indicator_values:
+      - education_platforms
+    security_domain: supplier_management
+    secondary_domain: data_protection
 
   # =============================================================================
   # Collection type-based mappings

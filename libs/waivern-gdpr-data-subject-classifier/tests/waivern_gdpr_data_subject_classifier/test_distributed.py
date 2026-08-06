@@ -324,6 +324,111 @@ class TestFinalise:
         assert result.content["summary"]["high_risk_count"] == 0
 
 
+class TestRiskModifierArticleReferences:
+    """Tests that a detected modifier contributes its own article references."""
+
+    def test_regex_path_merges_modifier_article_references(self) -> None:
+        """Regex-detected 'minor' adds Article 8 alongside the category's references."""
+        classifier = _make_classifier(enable_llm=False)
+        message = _make_message(
+            findings=[_make_patient_finding("child patient admitted to ward")]
+        )
+
+        prepare_result = classifier.prepare(
+            inputs=[message], output_schema=OUTPUT_SCHEMA
+        )
+        finalise_outcome = classifier.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
+
+        healthcare = next(
+            f
+            for f in result.content["findings"]
+            if f["data_subject_category"] == "healthcare"
+        )
+        assert "minor" in healthcare["risk_modifiers"]
+        assert "Article 8" in healthcare["article_references"]
+        # The category's own references survive the merge
+        assert "Article 4(1)" in healthcare["article_references"]
+
+    def test_llm_path_merges_modifier_article_references(self) -> None:
+        """LLM-detected 'minor' adds Article 8 alongside the category's references."""
+        classifier = _make_classifier()
+        message = _make_message(findings=[_make_patient_finding("Patient A")])
+
+        prepare_result = classifier.prepare(
+            inputs=[message], output_schema=OUTPUT_SCHEMA
+        )
+        llm_request = cast(
+            LLMRequest[GDPRDataSubjectFindingModel], prepare_result.requests[0]
+        )
+        dispatch_result = _build_llm_dispatch_result(
+            llm_request,
+            finding_modifiers={
+                prepare_result.state.classified_findings[0].id: ["minor"]
+            },
+        )
+
+        finalise_outcome = classifier.finalise(
+            prepare_result.state, [dispatch_result], OUTPUT_SCHEMA
+        )
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
+
+        finding = result.content["findings"][0]
+        assert "minor" in finding["risk_modifiers"]
+        assert "Article 8" in finding["article_references"]
+        assert "Article 4(1)" in finding["article_references"]
+
+    def test_unrecognised_modifier_leaves_references_unchanged(self) -> None:
+        """A modifier name absent from the ruleset contributes no references.
+
+        LLM-returned modifier names are free text, so an unknown name must be
+        carried through without inventing or dropping article references.
+        """
+        classifier = _make_classifier()
+        message = _make_message(findings=[_make_patient_finding("Patient A")])
+
+        prepare_result = classifier.prepare(
+            inputs=[message], output_schema=OUTPUT_SCHEMA
+        )
+        llm_request = cast(
+            LLMRequest[GDPRDataSubjectFindingModel], prepare_result.requests[0]
+        )
+        classified = prepare_result.state.classified_findings[0]
+        dispatch_result = _build_llm_dispatch_result(
+            llm_request,
+            finding_modifiers={classified.id: ["not_a_ruleset_modifier"]},
+        )
+
+        finalise_outcome = classifier.finalise(
+            prepare_result.state, [dispatch_result], OUTPUT_SCHEMA
+        )
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
+
+        finding = result.content["findings"][0]
+        assert "not_a_ruleset_modifier" in finding["risk_modifiers"]
+        assert finding["article_references"] == list(classified.article_references)
+
+    def test_findings_without_modifiers_keep_category_references(self) -> None:
+        """No detected modifier → article references match the category classification."""
+        classifier = _make_classifier(enable_llm=False)
+        message = _make_message(findings=[_make_employee_finding()])
+
+        prepare_result = classifier.prepare(
+            inputs=[message], output_schema=OUTPUT_SCHEMA
+        )
+        classified = prepare_result.state.classified_findings[0]
+        finalise_outcome = classifier.finalise(prepare_result.state, [], OUTPUT_SCHEMA)
+        assert isinstance(finalise_outcome, tuple)
+        result, _sidecars = finalise_outcome
+
+        finding = result.content["findings"][0]
+        assert finding["risk_modifiers"] == []
+        assert finding["article_references"] == list(classified.article_references)
+
+
 class TestDeserialise:
     """Tests for deserialise_prepare_result() round-trip fidelity."""
 
