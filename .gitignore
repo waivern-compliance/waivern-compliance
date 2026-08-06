@@ -27,4 +27,4 @@ outputs/
 .local
 
 # Private runbooks
-apps/wct/runbooks/Private/
+apps/wct/runbooks/private/
