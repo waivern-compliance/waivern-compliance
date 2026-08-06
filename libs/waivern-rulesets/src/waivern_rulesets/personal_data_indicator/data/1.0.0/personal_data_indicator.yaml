@@ -135,6 +135,7 @@ rules:
       - age_band
       - age_data
       - grade
+      - year_band
       - demographic_data
       - personal_demographics
 
@@ -184,10 +185,14 @@ rules:
       - staff_id
       - worker_id
       - operator_id
+      - actor_id
+      - changed_by
+      - revoked_by
       - access_token
       - refresh_token
       - session_token
       - auth_token
+      - token_hash
 
   # =============================================================================
   # Account & Financial Indicators
@@ -345,7 +350,9 @@ rules:
     category: network
     patterns:
       - network_data
+      - ip
       - ip_address
+      - ip_addr
       - remote_addr
       - client_ip
       - network_id

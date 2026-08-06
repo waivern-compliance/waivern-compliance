@@ -35,6 +35,12 @@ rules:
   - dropbox
   - supabase
   - expo
+  - vercel
+  - netlify
+  - cloudflare
+  - fly.io
+  - railway
+  - render.com
   - storage
   - upload
   service_category: cloud_infrastructure
@@ -46,6 +52,8 @@ rules:
   - mailchimp
   - mailgun
   - postmark
+  - resend
+  - loops.so
   - nodemailer
   - twilio
   - slack

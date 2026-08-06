@@ -22,6 +22,7 @@ purpose_slugs:
   - product_customisation
   - user_identity_login
   - payment_billing
+  - consent_management
   - behavioral_analytics
   - dynamic_personalisation
   - consumer_marketing
@@ -145,6 +146,14 @@ rules:
     indicator_values:
       - user_identity_login
     security_domain: authentication
+
+  - name: consent_and_withdrawal
+    description: Consent recording and withdrawal is a data-protection control, evidenced by the consent record itself
+    source_type: purpose
+    indicator_values:
+      - consent_management
+    security_domain: data_protection
+    secondary_domain: logging_monitoring
 
   - name: security_and_testing
     description: Security testing, fraud prevention, and vulnerability assessment purposes

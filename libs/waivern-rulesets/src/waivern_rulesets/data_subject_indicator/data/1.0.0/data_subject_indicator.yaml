@@ -40,6 +40,8 @@ rules:
   - teacher
   - teachers
   - teaching_staff
+  - cpd
+  - continuing_professional_development
   - personnel
   - hr_records
   - staff_member
@@ -125,6 +127,8 @@ rules:
   patterns:
   - terminated
   - inactive
+  - deactivated
+  - suspended
   - former
   - ex_employee
   - termination_date
