@@ -263,9 +263,25 @@ risk_modifiers:
   risk_increasing:
     - patterns:
         - minor
+        - minors
         - child
+        - children
+        - kid
+        - kids
+        - pupil
+        - pupils
+        - toddler
+        - infant
+        - schoolchild
+        - under_age
+        - underage
+        - year_group
+        - key_stage
       value_patterns:
         - "under.*years"
+        # An age at or below 17 signals a data subject who cannot consent
+        # unaided. Bounded to 0-17 so adult ages do not match.
+        - "\\bage[sd]?\\s*(?:[0-9]|1[0-7])\\b"
       modifier: "minor"
       article_references:
         - "Article 8"
