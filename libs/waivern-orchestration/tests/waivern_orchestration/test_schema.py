@@ -1,18 +1,20 @@
 """Tests for RunbookSchemaGenerator."""
 
 import json
+from importlib.resources import files
 from pathlib import Path
 
-import waivern_orchestration
 from waivern_orchestration import RunbookSchemaGenerator
 
-COMMITTED_SCHEMA_PATH = (
-    Path(waivern_orchestration.__file__).parent
-    / "schemas"
-    / "json_schemas"
-    / "runbook"
-    / RunbookSchemaGenerator.SCHEMA_VERSION
-    / "runbook.json"
+COMMITTED_SCHEMA_PATH = Path(
+    str(
+        files("waivern_orchestration")
+        / "schemas"
+        / "json_schemas"
+        / "runbook"
+        / RunbookSchemaGenerator.SCHEMA_VERSION
+        / "runbook.json"
+    )
 )
 
 

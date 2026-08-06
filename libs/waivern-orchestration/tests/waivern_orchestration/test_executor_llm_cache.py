@@ -6,7 +6,6 @@ the responses for debugging.
 """
 
 from dataclasses import dataclass
-from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -34,9 +33,7 @@ CONNECTOR_TYPE = "src"
 ARTIFACT_ID = "data"
 
 
-def record_cache_clear(
-    store: ArtifactStore, monkeypatch: pytest.MonkeyPatch
-) -> list[str]:
+def record_cache_clear(store: LLMCache, monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """Record run IDs passed to the store's cache_clear.
 
     The recorder delegates to the real implementation, so the store still
@@ -51,7 +48,7 @@ def record_cache_clear(
 
     """
     cleared: list[str] = []
-    original = cast("LLMCache", store).cache_clear
+    original = store.cache_clear
 
     async def recording_cache_clear(run_id: str) -> None:
         cleared.append(run_id)
