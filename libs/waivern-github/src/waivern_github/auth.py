@@ -72,7 +72,7 @@ class GitHubAppAuth(GitHubAuth):
         payload = {
             "iat": now,
             "exp": now + self.JWT_EXPIRY_SECONDS,
-            "iss": self._app_id,
+            "iss": str(self._app_id),
         }
         return jwt.encode(payload, self._private_key, algorithm="RS256")
 

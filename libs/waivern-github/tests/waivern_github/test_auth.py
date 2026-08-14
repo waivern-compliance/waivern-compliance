@@ -168,7 +168,7 @@ class TestGitHubAppAuth:
         decoded = pyjwt.decode(captured_jwt, options={"verify_signature": False})
 
         assert "iss" in decoded
-        assert decoded["iss"] == 12345
+        assert decoded["iss"] == "12345"
         assert "iat" in decoded
         assert "exp" in decoded
         assert decoded["exp"] > decoded["iat"]
