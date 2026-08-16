@@ -74,6 +74,7 @@ class TestGitHubAppAuth:
             app_id=int(app_id),  # type: ignore[arg-type]
             private_key_path=key_path,
             installation_id=installation_id,  # type: ignore[arg-type]
+            repository=TEST_REPO,
         )
 
         # This makes a real API call to GitHub
