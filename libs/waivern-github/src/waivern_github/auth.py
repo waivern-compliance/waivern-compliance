@@ -43,11 +43,13 @@ class GitHubAppAuth(GitHubAuth):
         app_id: int,
         private_key_path: Path,
         installation_id: str,
+        repository: str,
     ) -> None:
         """Initialise with GitHub App credentials."""
         self._app_id = app_id
         self._private_key = private_key_path.read_text()
         self._installation_id = installation_id
+        self._repository = repository
 
     @override
     def get_token(self) -> str:
@@ -77,13 +79,14 @@ class GitHubAppAuth(GitHubAuth):
         return jwt.encode(payload, self._private_key, algorithm="RS256")
 
     def _exchange_jwt_for_token(self, jwt_token: str) -> str:
-        """Exchange JWT for installation access token."""
+        """Exchange JWT for installation access token scoped to the target repository."""
         url = f"{self.GITHUB_API_URL}/app/installations/{self._installation_id}/access_tokens"
         headers = {
             "Authorization": f"Bearer {jwt_token}",
             "Accept": "application/vnd.github+json",
         }
-        response = httpx.post(url, headers=headers)
+        _owner, repo_name = self._repository.split("/", 1)
+        response = httpx.post(url, headers=headers, json={"repositories": [repo_name]})
         response.raise_for_status()
         return response.json()["token"]
 
@@ -119,6 +122,7 @@ def create_auth(config: GitHubConnectorConfig) -> GitHubAuth | None:
             app_id=config.app_id,
             private_key_path=config.private_key_path,
             installation_id=config.installation_id,
+            repository=config.repository,
         )
 
     return None

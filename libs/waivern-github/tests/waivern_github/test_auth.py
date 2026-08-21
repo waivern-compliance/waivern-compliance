@@ -38,6 +38,14 @@ etSwzDZ4IRDSvUTsYZ1wMJJdEUHZljj8iPpbiivcOXaKelu++So=
 -----END RSA PRIVATE KEY-----"""
 
 
+def _mock_success_response(token: str = "ghs_token") -> MagicMock:  # noqa: S107 - test token
+    """Build a mock httpx response for a successful token exchange."""
+    mock_response = MagicMock()
+    mock_response.status_code = 201
+    mock_response.json.return_value = {"token": token}
+    return mock_response
+
+
 class TestPATAuth:
     """Tests for PATAuth class."""
 
@@ -63,13 +71,13 @@ class TestGitHubAppAuth:
             app_id=12345,
             private_key_path=key_file,
             installation_id="67890",
+            repository="octocat/Hello-World",
         )
 
         with patch("waivern_github.auth.httpx.post") as mock_post:
-            mock_response = MagicMock()
-            mock_response.status_code = 201
-            mock_response.json.return_value = {"token": "ghs_installation_token_abc"}
-            mock_post.return_value = mock_response
+            mock_post.return_value = _mock_success_response(
+                token="ghs_installation_token_abc"  # noqa: S106 - test token
+            )
 
             result = auth.get_token()
 
@@ -84,13 +92,11 @@ class TestGitHubAppAuth:
             app_id=12345,
             private_key_path=key_file,
             installation_id="67890",
+            repository="octocat/Hello-World",
         )
 
         with patch("waivern_github.auth.httpx.post") as mock_post:
-            mock_response = MagicMock()
-            mock_response.status_code = 201
-            mock_response.json.return_value = {"token": "ghs_token"}
-            mock_post.return_value = mock_response
+            mock_post.return_value = _mock_success_response()
 
             auth.get_token()
 
@@ -118,6 +124,7 @@ class TestGitHubAppAuth:
             app_id=12345,
             private_key_path=key_file,
             installation_id="67890",
+            repository="octocat/Hello-World",
         )
 
         with patch("waivern_github.auth.httpx.post") as mock_post:
@@ -144,14 +151,13 @@ class TestGitHubAppAuth:
             app_id=12345,
             private_key_path=key_file,
             installation_id="67890",
+            repository="octocat/Hello-World",
         )
 
         captured_jwt = None
 
         with patch("waivern_github.auth.httpx.post") as mock_post:
-            mock_response = MagicMock()
-            mock_response.status_code = 201
-            mock_response.json.return_value = {"token": "ghs_token"}
+            mock_response = _mock_success_response()
             mock_post.return_value = mock_response
 
             def capture_jwt(*args, **kwargs):
@@ -172,6 +178,28 @@ class TestGitHubAppAuth:
         assert "iat" in decoded
         assert "exp" in decoded
         assert decoded["exp"] > decoded["iat"]
+
+    def test_get_token_scopes_request_to_target_repository(
+        self, tmp_path: Path
+    ) -> None:
+        """Test that get_token scopes the installation token to the target repository."""
+        key_file = tmp_path / "test-key.pem"
+        key_file.write_text(TEST_PRIVATE_KEY)
+
+        auth = GitHubAppAuth(
+            app_id=12345,
+            private_key_path=key_file,
+            installation_id="67890",
+            repository="octocat/Hello-World",
+        )
+
+        with patch("waivern_github.auth.httpx.post") as mock_post:
+            mock_post.return_value = _mock_success_response()
+
+            auth.get_token()
+
+        call_args = mock_post.call_args
+        assert call_args[1]["json"] == {"repositories": ["Hello-World"]}
 
 
 class TestCreateAuth:
@@ -258,3 +286,40 @@ class TestCreateAuth:
         result = create_auth(config)
 
         assert isinstance(result, GitHubAppAuth)
+
+    def test_creates_repo_scoped_github_app_auth(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Test that create_auth threads config.repository into GitHubAppAuth's token scoping."""
+        for var in [
+            "GITHUB_TOKEN",
+            "GITHUB_APP_ID",
+            "GITHUB_APP_PRIVATE_KEY_PATH",
+            "GITHUB_APP_INSTALLATION_ID",
+        ]:
+            monkeypatch.delenv(var, raising=False)
+
+        key_file = tmp_path / "test-key.pem"
+        key_file.write_text(TEST_PRIVATE_KEY)
+
+        monkeypatch.setenv("GITHUB_APP_ID", "12345")
+        monkeypatch.setenv("GITHUB_APP_PRIVATE_KEY_PATH", str(key_file))
+        monkeypatch.setenv("GITHUB_APP_INSTALLATION_ID", "67890")
+
+        config = GitHubConnectorConfig.from_properties(
+            {
+                "repository": "octocat/Hello-World",
+                "auth_method": "app",
+            }
+        )
+
+        auth = create_auth(config)
+        assert auth is not None
+
+        with patch("waivern_github.auth.httpx.post") as mock_post:
+            mock_post.return_value = _mock_success_response()
+
+            auth.get_token()
+
+        call_args = mock_post.call_args
+        assert call_args[1]["json"] == {"repositories": ["Hello-World"]}
