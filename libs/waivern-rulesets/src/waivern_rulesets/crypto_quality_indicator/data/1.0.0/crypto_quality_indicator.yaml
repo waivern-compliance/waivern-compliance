@@ -199,7 +199,6 @@ rules:
     algorithm: sodium
     quality_rating: strong
     patterns:
-      - sodium_
       - libsodium
       - sodium_crypto
       - sodium_secretbox

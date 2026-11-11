@@ -2,9 +2,10 @@
 # Dolibarr-specific security control patterns with binary polarity.
 #
 # Polarity note:
-#   All rules are positive — the ERP extension recognises Dolibarr-proprietary
-#   security mechanisms as good practice. Negative patterns (shell_exec, passthru,
-#   TLS disabled) are covered by the generic security_control_indicator ruleset.
+#   Positive rules recognise Dolibarr-proprietary security mechanisms as good
+#   practice; negative rules flag misuse of Dolibarr APIs. Generic PHP negatives
+#   (code execution, deserialisation, TLS disabled) are covered by the generic
+#   security_control_indicator ruleset.
 
 name: security_control_indicator_erp
 version: 1.0.0
@@ -60,6 +61,42 @@ rules:
       - db->escape
       - db->sanitize
       - db->idate
+
+  - name: Dolibarr CSRF Token
+    description: >
+      Dolibarr anti-CSRF tokens. newToken() embeds a token in forms and links;
+      currentToken() reads the token for state-changing requests, which
+      main.inc.php validates.
+    security_domain: vulnerability_management
+    polarity: positive
+    patterns:
+      - newToken
+      - currentToken
+
+  - name: Dolibarr Output Escaping
+    description: >
+      Dolibarr output escaping functions that prevent cross-site scripting in
+      HTML attributes and content, JavaScript strings, and URLs.
+    security_domain: vulnerability_management
+    polarity: positive
+    patterns:
+      - dol_escape_htmltag
+      - dol_escape_js
+      - dol_escape_uri
+
+  # ===========================================================================
+  # Vulnerability Management — Negative
+  # ===========================================================================
+
+  - name: Dolibarr Unfiltered Input
+    description: >
+      GETPOST() with the 'none' filter returns request input without any
+      sanitisation, bypassing Dolibarr's input filtering. 'restricthtml' is not
+      matched: it is Dolibarr's HTML sanitiser.
+    security_domain: vulnerability_management
+    polarity: negative
+    value_patterns:
+      - "GETPOST\\s*\\([^)]*,\\s*['\"]none['\"]"
 
   # ===========================================================================
   # Authentication — Positive

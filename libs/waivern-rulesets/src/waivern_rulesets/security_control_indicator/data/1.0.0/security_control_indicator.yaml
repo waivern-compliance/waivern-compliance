@@ -99,7 +99,23 @@ rules:
     patterns:
       - prepared_statement
       - parameterize
+      - bindParam
+      - bindValue
+      - bind_param
+
+  - name: Output Escaping
+    description: Escapes output before rendering to prevent cross-site scripting
+    security_domain: vulnerability_management
+    polarity: positive
+    patterns:
       - htmlspecialchars
+      - htmlentities
+
+  - name: CSRF Protection
+    description: Uses anti-CSRF tokens to protect state-changing requests
+    security_domain: vulnerability_management
+    polarity: positive
+    patterns:
       - csrf_token
 
   # ===========================================================================
@@ -112,8 +128,18 @@ rules:
     polarity: negative
     patterns:
       - shell_exec
-      - eval_user_input
       - passthru
+    value_patterns:
+      # Excludes method calls (->exec), static calls (::exec), variable
+      # functions ($exec), prefixed names (curl_exec) and declarations.
+      - "(?<![\\w>:$])(?<!function )(eval|exec|system|proc_open|popen)\\s*\\("
+
+  - name: Insecure Deserialisation
+    description: Deserialises data with unserialize(), enabling object injection when input is untrusted
+    security_domain: vulnerability_management
+    polarity: negative
+    value_patterns:
+      - "\\bunserialize\\s*\\("
 
   # ===========================================================================
   # Data Protection — Positive
@@ -148,10 +174,9 @@ rules:
     description: Verifies TLS certificates to prevent man-in-the-middle attacks
     security_domain: network_security
     polarity: positive
-    patterns:
-      - tls_verify
-      - ssl_cert_verify
-      - certificate_pinning
+    value_patterns:
+      - "CURLOPT_SSL_VERIFYPEER\\s*(=>|,)\\s*(true|1)\\b"
+      - "CURLOPT_SSL_VERIFYHOST\\s*(=>|,)\\s*2\\b"
 
   # ===========================================================================
   # Network Security — Negative
@@ -161,7 +186,6 @@ rules:
     description: Disables TLS certificate verification, enabling man-in-the-middle attacks
     security_domain: network_security
     polarity: negative
-    patterns:
-      - ssl_verify_false
-      - verify_peer_false
-      - disable_ssl_verification
+    value_patterns:
+      - "CURLOPT_SSL_VERIFY(PEER|HOST)\\s*(=>|,)\\s*(false|0)\\b"
+      - "['\"]verify_peer(_name)?['\"]\\s*=>\\s*false\\b"
